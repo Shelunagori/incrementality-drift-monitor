@@ -179,5 +179,6 @@ infra/     Postgres init SQL, demo script
 | [DECISIONS](docs/DECISIONS.md) | Choices made where the brief was open |
 | [LIMITATIONS](docs/LIMITATIONS.md) | What this POC does not do |
 | [INTERVIEW_NOTES](docs/INTERVIEW_NOTES.md) | Why each design decision, and the hardest questions answered honestly |
+| [ROADMAP](docs/ROADMAP.md) | What to build next: connectors, closing the loop into the MMM, multi-metric, Slack |
 
 Other make targets: `make dev`, `make seed`, `make help`. License: MIT.
