@@ -54,6 +54,34 @@ the story. It uses Ollama (`llama3.1:8b`) if it is running, otherwise an offline
 Execution is idempotent (exactly once, even under concurrent approvals) and every state change
 is written to an audit trail.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    D[(Daily spend +<br/>conversions<br/>per geo)] --> S
+
+    subgraph S[Stats engine · deterministic Python]
+        R[Rolling response model<br/>iROAS ± CI] --> DR[Drift detectors<br/>PELT · CUSUM · ledger z-test]
+    end
+
+    L[(Evidence ledger<br/>past lift tests)] --> DR
+    DR --> ST[Status<br/>🟢 🟡 🔴 + score + reasons]
+
+    ST --> AG[AI agent<br/>read-only tools]
+    AG -->|explanation, every<br/>number cited + checked| U
+    AG -->|draft only| P[Retest proposal<br/>geos · duration · MDE · cost<br/><i>pending</i>]
+    ST --> P
+
+    P --> U{Human<br/>approve / reject}
+    U -->|approve · exactly once| X[Scheduled retest]
+    U -->|reject| N[Nothing runs]
+    P & U & X --> A[(Audit trail)]
+    X -. result lands in .-> L
+```
+
+One FastAPI backend, one Postgres (with pgvector for the agent's document search), one Next.js
+frontend. More detail: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Why this matters for a company like Paramark
 
 A measurement company's product is **trustworthy evidence**. An incrementality test is the
