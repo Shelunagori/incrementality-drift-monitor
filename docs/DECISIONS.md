@@ -40,3 +40,7 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 34 | 4 | The agent sees at most the 12 most recent effectiveness windows. | Keeps prompts small for local models. |
 | 35 | 5 | All pages are client components fetching the API from the browser (`NEXT_PUBLIC_API_URL`). | Simplest with a live demo clock; no server-side caching to invalidate. |
 | 36 | 5 | Chart markers snap to the first window ending on/after the event date; markers are also listed under the chart. | Category x-axis; the list makes markers accessible and testable. |
+| 37 | 6 | `make demo` falls back to `LLM_PROVIDER=fake` when Ollama is not reachable, and says so. | The demo must never fail on stage because a model is not running. |
+| 38 | 6 | The Makefile includes `.env` (if present) and exports it to all targets. | One place to switch providers for `make dev` / `make demo`. |
+| 39 | 6 | The demo script dry-runs day 460 and day 510 against the live API, prints both, then resets the clock to 460 for the live walkthrough (two "Advance 30 days" clicks reach day 520). | Printed story uses real engine output, not canned text. |
+| 40 | 6 | README screenshots are real, captured with Playwright against the running app (offline template model). | Better than placeholders; regenerate after UI changes. |

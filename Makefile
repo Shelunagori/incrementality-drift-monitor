@@ -1,12 +1,14 @@
 # incrementality-drift-monitor — developer entry points.
 
 SHELL := /bin/bash
+-include .env
+export
 BACKEND := backend
 FRONTEND := frontend
-export DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm
-export TEST_DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm_test
+DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm
+TEST_DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm_test
 
-.PHONY: help install db db-down data seed dev backend frontend test test-backend test-frontend lint
+.PHONY: help install db db-down data seed demo dev backend frontend test test-backend test-frontend lint
 
 help:
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -26,6 +28,9 @@ data: ## Regenerate the synthetic dataset into backend/data/
 
 seed: db data ## Migrate the database and load the synthetic dataset
 	cd $(BACKEND) && uv run python -m scripts.seed
+
+demo: seed ## Seed, start backend + frontend, print the demo story
+	./infra/demo.sh
 
 backend: ## Run the FastAPI dev server on :8000
 	cd $(BACKEND) && uv run uvicorn app.main:app --reload --port 8000
