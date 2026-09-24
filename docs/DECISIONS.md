@@ -24,3 +24,10 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 18 | 2 | CUSUM uses k = 1.0, h = 8 (not the textbook 0.5 / 5). | Overlapping windows are autocorrelated; textbook values raised false alarms on Google. |
 | 19 | 2 | Billboard (never tested) is YELLOW, not GREEN, including at the demo start. | "No evidence" is not "fresh evidence". |
 | 20 | 2 | Retest: 5 matched pairs, 20% target MDE, alpha 0.05, power 0.8, 14-56 days. | Common geo-test defaults. |
+| 21 | 3 | Channel id in URLs is the channel name (`/channels/meta/timeline`). | Readable, stable, and what the agent tools use. |
+| 22 | 3 | Simulated clock starts at day 460 (2025-04-05): after all seeded tests, 20 days before the meta drift. `POST /demo/set?day=` added next to `/demo/advance` for the timeline scrubber. | Demo story needs a "before" state. Clock is clamped to [90, 729]. |
+| 23 | 3 | Proposal idempotency: `Idempotency-Key` header, or by default `retest:{channel}:{day}:{mde}`. Approval is exactly-once via a row lock plus a unique `scheduled_tests.proposal_id`. | Retries (including LLM retries) never create duplicates. |
+| 24 | 3 | Retest proposals are refused (409) for GREEN channels, in the API as well as the agent. | One guardrail for every caller. |
+| 25 | 3 | Approved retests start 7 days after the simulated day of approval. | Deterministic, plausible lead time. |
+| 26 | 3 | No authentication; `actor` is a free-text field defaulting to `demo-user`. | POC scope; listed in LIMITATIONS. |
+| 27 | 3 | Adding a ledger entry clears all snapshots; they are recomputed on next read. | Simplest correct invalidation. |

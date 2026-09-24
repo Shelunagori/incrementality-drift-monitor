@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     app_name: str = "incrementality-drift-monitor"
     database_url: str = "postgresql+psycopg://idm:idm@localhost:5432/idm"
     cors_origins: list[str] = ["http://localhost:3000"]
+    demo_start_day: int = 460  # simulated "today" after seeding (before any planted drift)
 
 
 @lru_cache

@@ -2,7 +2,18 @@
 
 import datetime as dt
 
-from sqlalchemy import Date, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -79,3 +90,89 @@ class EvidenceLedgerEntry(Base):
     )
 
     channel: Mapped[Channel] = relationship(back_populates="ledger_entries")
+
+
+class SimClock(Base):
+    """Single-row table holding the simulated 'today' (a day number) for the demo."""
+
+    __tablename__ = "sim_clock"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    current_day: Mapped[int] = mapped_column(Integer)
+
+
+class ChannelSnapshot(Base):
+    """Persisted engine output (a ChannelAssessment) for one channel at one as-of day."""
+
+    __tablename__ = "channel_snapshots"
+    __table_args__ = (UniqueConstraint("as_of_day", "channel_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    as_of_day: Mapped[int] = mapped_column(Integer, index=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"))
+    status: Mapped[str] = mapped_column(String(16))
+    score: Mapped[int] = mapped_column(Integer)
+    payload: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Proposal(Base):
+    """A proposed write action. Nothing is executed until a human approves it."""
+
+    __tablename__ = "proposals"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"), index=True)
+    status: Mapped[str] = mapped_column(String(16), index=True)  # pending|approved|rejected
+    plan: Mapped[dict] = mapped_column(JSONB)
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(64))
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
+    as_of_day: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    decided_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    decided_by: Mapped[str | None] = mapped_column(String(64))
+    decision_note: Mapped[str | None] = mapped_column(Text)
+
+    channel: Mapped[Channel] = relationship()
+
+
+class ScheduledTest(Base):
+    """The executed effect of an approved retest proposal. At most one per proposal."""
+
+    __tablename__ = "scheduled_tests"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    proposal_id: Mapped[int] = mapped_column(ForeignKey("proposals.id"), unique=True)
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channels.id"))
+    start_date: Mapped[dt.date] = mapped_column(Date)
+    end_date: Mapped[dt.date] = mapped_column(Date)
+    holdout_geos: Mapped[list] = mapped_column(JSONB)
+    control_geos: Mapped[list] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(String(16), default="scheduled")
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class AuditEvent(Base):
+    """Append-only record of every state change."""
+
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entity_type: Mapped[str] = mapped_column(String(32), index=True)
+    entity_id: Mapped[int] = mapped_column(Integer, index=True)
+    action: Mapped[str] = mapped_column(String(32))
+    actor: Mapped[str] = mapped_column(String(64))
+    from_status: Mapped[str | None] = mapped_column(String(16))
+    to_status: Mapped[str | None] = mapped_column(String(16))
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

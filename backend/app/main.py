@@ -1,9 +1,12 @@
 """FastAPI application entry point."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app import __doc__ as _pkg_doc
+from app.actions.errors import ActionError
+from app.api import channels, jobs, ledger, proposals
 from app.config import get_settings
 
 VERSION = "0.1.0"
@@ -19,6 +22,13 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(ActionError)
+    def _action_error(_: Request, exc: ActionError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+
+    for router in (channels.router, ledger.router, proposals.router, jobs.jobs, jobs.demo):
+        app.include_router(router)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict[str, str]:

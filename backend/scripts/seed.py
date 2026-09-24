@@ -19,6 +19,8 @@ from scripts import generate_data
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 TABLES_IN_LOAD_ORDER = ["channels", "geos", "daily_metrics", "daily_conversions", "evidence_ledger"]
+# Derived / workflow tables that are cleared whenever the base data is reloaded.
+WORKFLOW_TABLES = ["audit_events", "scheduled_tests", "proposals", "channel_snapshots", "sim_clock"]
 
 
 def ensure_data(data_dir: Path) -> None:
@@ -50,7 +52,10 @@ def load(engine: Engine, data_dir: Path = DATA_DIR) -> dict[str, int]:
 
     with engine.begin() as conn:
         conn.execute(
-            text(f"TRUNCATE {', '.join(reversed(TABLES_IN_LOAD_ORDER))} RESTART IDENTITY CASCADE")
+            text(
+                f"TRUNCATE {', '.join(WORKFLOW_TABLES + TABLES_IN_LOAD_ORDER[::-1])} "
+                "RESTART IDENTITY CASCADE"
+            )
         )
 
     channels = channels.assign(id=range(1, len(channels) + 1))
@@ -100,6 +105,10 @@ def load(engine: Engine, data_dir: Path = DATA_DIR) -> dict[str, int]:
         ledger,
     )
     with engine.begin() as conn:
+        conn.execute(
+            text("INSERT INTO sim_clock (id, current_day) VALUES (1, :d)"),
+            {"d": get_settings().demo_start_day},
+        )
         for table in ("channels", "geos", "evidence_ledger"):
             conn.execute(
                 text(

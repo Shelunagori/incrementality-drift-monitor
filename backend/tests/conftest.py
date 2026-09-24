@@ -62,3 +62,55 @@ def ledger(synthetic):
     from app.stats.schemas import LedgerEntry
 
     return [LedgerEntry(**r) for r in synthetic["evidence_ledger"].to_dict("records")]
+
+
+@pytest.fixture(scope="session")
+def seeded_engine(db_engine, data_dir):
+    """Test database loaded with the synthetic dataset (once per session)."""
+    from scripts.seed import load
+
+    load(db_engine, data_dir)
+    return db_engine
+
+
+@pytest.fixture
+def session_factory(seeded_engine):
+    """Resets workflow state (proposals, audit, snapshots, manual ledger rows, clock)."""
+    from sqlalchemy.orm import sessionmaker
+
+    from app.config import get_settings
+
+    with seeded_engine.begin() as conn:
+        conn.execute(
+            text(
+                "TRUNCATE audit_events, scheduled_tests, proposals, channel_snapshots "
+                "RESTART IDENTITY CASCADE"
+            )
+        )
+        conn.execute(text("DELETE FROM evidence_ledger WHERE source <> 'seed'"))
+        conn.execute(
+            text("UPDATE sim_clock SET current_day = :d"), {"d": get_settings().demo_start_day}
+        )
+    return sessionmaker(bind=seeded_engine, expire_on_commit=False)
+
+
+@pytest.fixture
+def client(session_factory):
+    """API client whose request sessions use the test database."""
+    from fastapi.testclient import TestClient
+
+    from app.api.deps import db
+    from app.main import app
+
+    def _db():
+        with session_factory() as s:
+            try:
+                yield s
+                s.commit()
+            except Exception:
+                s.rollback()
+                raise
+
+    app.dependency_overrides[db] = _db
+    yield TestClient(app)
+    app.dependency_overrides.clear()
