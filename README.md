@@ -178,5 +178,6 @@ infra/     Postgres init SQL, demo script
 | [ARCHITECTURE](docs/ARCHITECTURE.md) | Components, data model, trust boundaries |
 | [DECISIONS](docs/DECISIONS.md) | Choices made where the brief was open |
 | [LIMITATIONS](docs/LIMITATIONS.md) | What this POC does not do |
+| [INTERVIEW_NOTES](docs/INTERVIEW_NOTES.md) | Why each design decision, and the hardest questions answered honestly |
 
 Other make targets: `make dev`, `make seed`, `make help`. License: MIT.
