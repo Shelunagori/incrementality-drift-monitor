@@ -17,6 +17,14 @@ dependencies = [
     "scipy>=1.13",
     "statsmodels>=0.14",
     "ruptures>=1.1.9",
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+    "langchain-ollama>=0.2",
+    "langchain-anthropic>=0.3",
+    "langchain-google-genai>=2.0",
+    "langchain-openai>=0.2",
+    "langchain-voyageai>=0.1",
+    "pgvector>=0.3",
 ]
 
 [dependency-groups]

@@ -2,6 +2,7 @@
 
 import datetime as dt
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Date,
     DateTime,
@@ -176,3 +177,19 @@ class AuditEvent(Base):
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class KnowledgeChunk(Base):
+    """A retrievable text chunk (methodology section or ledger note) with its embedding."""
+
+    __tablename__ = "knowledge_chunks"
+    __table_args__ = (UniqueConstraint("embedding_model", "source", "source_ref", "content_hash"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    source: Mapped[str] = mapped_column(String(32))
+    source_ref: Mapped[str] = mapped_column(String(128))
+    title: Mapped[str] = mapped_column(String(256))
+    content: Mapped[str] = mapped_column(Text)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    embedding_model: Mapped[str] = mapped_column(String(128), index=True)
+    embedding: Mapped[list[float]] = mapped_column(Vector())

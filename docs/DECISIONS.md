@@ -31,3 +31,10 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 25 | 3 | Approved retests start 7 days after the simulated day of approval. | Deterministic, plausible lead time. |
 | 26 | 3 | No authentication; `actor` is a free-text field defaulting to `demo-user`. | POC scope; listed in LIMITATIONS. |
 | 27 | 3 | Adding a ledger entry clears all snapshots; they are recomputed on next read. | Simplest correct invalidation. |
+| 28 | 4 | `EMBEDDING_PROVIDER=anthropic` uses Voyage AI (`VOYAGE_API_KEY`). | Anthropic has no embeddings API; Voyage is the partner Anthropic recommends. |
+| 29 | 4 | Extra provider `fake`: a deterministic template writer + hashed bag-of-words embeddings. | Tests and CI need no model; `make demo` works offline. |
+| 30 | 4 | `explain` pre-fetches a fixed set of read-only tools, then asks the model to write; `chat` lets the model pick tools. | Small local models (llama3.1:8b) are unreliable at tool calling; explanations must not depend on it. |
+| 31 | 4 | Citations are tool-call ids (`[T1]`); the guardrail checks every number (incl. % and dates) against the outputs it cites. After one failed retry the answer is replaced by a template built from tool outputs (`fallback: true`). | Spec says reject + retry once; something grounded must still be returned. |
+| 32 | 4 | Proposal policy is enforced in code: chat mode only, channel RED/YELLOW, and either the user's own message asks for a (re)test or the channel is RED. Tool outputs never influence the decision. | Prompt-injection resistance does not rely on the model. |
+| 33 | 4 | pgvector column has no fixed dimension; every row stores `embedding_model` and queries filter on it. | Providers have different dimensions; switching provider re-indexes instead of mixing vectors. |
+| 34 | 4 | The agent sees at most the 12 most recent effectiveness windows. | Keeps prompts small for local models. |

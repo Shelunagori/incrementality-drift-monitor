@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app import __doc__ as _pkg_doc
 from app.actions.errors import ActionError
-from app.api import channels, jobs, ledger, proposals
+from app.api import agent, channels, jobs, ledger, proposals
 from app.config import get_settings
 
 VERSION = "0.1.0"
@@ -27,7 +27,14 @@ def create_app() -> FastAPI:
     def _action_error(_: Request, exc: ActionError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
-    for router in (channels.router, ledger.router, proposals.router, jobs.jobs, jobs.demo):
+    for router in (
+        channels.router,
+        ledger.router,
+        proposals.router,
+        jobs.jobs,
+        jobs.demo,
+        agent.router,
+    ):
         app.include_router(router)
 
     @app.get("/health", tags=["meta"])
