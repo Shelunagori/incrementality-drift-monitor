@@ -10,7 +10,7 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 4 | 0 | `make seed` / `make demo` are added in the phases that implement them (1 and 6), not as stubs. | "No dead code / no TODOs". |
 | 5 | 0 | Generated data under `backend/data/` is git-ignored (only `.gitkeep` tracked); `make seed` regenerates it deterministically. | Avoid committing large reproducible files. |
 | 6 | 0 | CI sets `LLM_PROVIDER=fake` / `EMBEDDING_PROVIDER=fake`; the fake provider (Phase 4) is test-only. | Suite must run without any model. |
-| 7 | 0 | CI runs lint + typecheck + tests, not `next build`. | `next build` crashed with SIGBUS in the local sandbox VM (environment limit, not code); kept CI to what was verified. Can be added. |
+| 7 | 0→5 | CI also runs `next build` (added in Phase 5). | It crashed with SIGBUS only in the local arm64 sandbox VM; verified to build cleanly on x86_64 Linux like CI. |
 | 8 | 0 | Repo-local git identity: `Shailendra Nagori <shelunagori@gmail.com>` (set by the owner). | No git user was configured on the host. |
 | 9 | 1 | Outcome and spend live in two tables: `daily_metrics` (day, geo, channel, spend) and `daily_conversions` (day, geo, conversions). | Conversions are per geo, not per channel; one table would duplicate them 4x. |
 | 10 | 1 | CSV (not parquet) for generated files. | Avoids a pyarrow dependency; files are small (~3 MB). |
@@ -38,3 +38,5 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 32 | 4 | Proposal policy is enforced in code: chat mode only, channel RED/YELLOW, and either the user's own message asks for a (re)test or the channel is RED. Tool outputs never influence the decision. | Prompt-injection resistance does not rely on the model. |
 | 33 | 4 | pgvector column has no fixed dimension; every row stores `embedding_model` and queries filter on it. | Providers have different dimensions; switching provider re-indexes instead of mixing vectors. |
 | 34 | 4 | The agent sees at most the 12 most recent effectiveness windows. | Keeps prompts small for local models. |
+| 35 | 5 | All pages are client components fetching the API from the browser (`NEXT_PUBLIC_API_URL`). | Simplest with a live demo clock; no server-side caching to invalidate. |
+| 36 | 5 | Chart markers snap to the first window ending on/after the event date; markers are also listed under the chart. | Category x-axis; the list makes markers accessible and testable. |
