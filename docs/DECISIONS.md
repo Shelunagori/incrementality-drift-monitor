@@ -19,3 +19,8 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 13 | 1 | Seeded historical tests report an 8% standard error but their realised error is drawn at 3%. | Keeps the demo story from hinging on one unlucky draw while CIs stay realistic. |
 | 14 | 1 | Historical tests end on days 360 (google), 400 (meta), 430 (tiktok), each 28 days long. | "Before day 480"; staggered so evidence ages differ. |
 | 15 | 1 | DB-backed tests skip (with a reason) when `TEST_DATABASE_URL` is unset; `make test` and CI always set it. | Pure-python tests still run anywhere. |
+| 16 | 2 | Response model: joint two-way fixed-effects OLS on per-capita data, 42-day windows every 7 days. | Simplest model that separates four simultaneous channels; per-capita scaling removes bias from multiplicative seasonality. |
+| 17 | 2 | Effectiveness is reported as "iROAS at reference spend"; ledger tests are converted to the same basis. | Otherwise seasonal saturation looks like drift. |
+| 18 | 2 | CUSUM uses k = 1.0, h = 8 (not the textbook 0.5 / 5). | Overlapping windows are autocorrelated; textbook values raised false alarms on Google. |
+| 19 | 2 | Billboard (never tested) is YELLOW, not GREEN, including at the demo start. | "No evidence" is not "fresh evidence". |
+| 20 | 2 | Retest: 5 matched pairs, 20% target MDE, alpha 0.05, power 0.8, 14-56 days. | Common geo-test defaults. |

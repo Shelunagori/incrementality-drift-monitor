@@ -41,3 +41,24 @@ def db_engine(db_url: str) -> Engine:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     upgrade_to_head(db_url)
     return engine
+
+
+@pytest.fixture(scope="session")
+def panel(synthetic):
+    """Engine panel built from the synthetic dataset."""
+    from app.stats.panel import Panel
+
+    return Panel.from_frames(
+        synthetic["channels"],
+        synthetic["geos"],
+        synthetic["daily_spend"],
+        synthetic["daily_conversions"],
+    )
+
+
+@pytest.fixture(scope="session")
+def ledger(synthetic):
+    """Seeded ledger entries as engine LedgerEntry objects."""
+    from app.stats.schemas import LedgerEntry
+
+    return [LedgerEntry(**r) for r in synthetic["evidence_ledger"].to_dict("records")]
