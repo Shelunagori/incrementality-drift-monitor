@@ -1,11 +1,12 @@
 # incrementality-drift-monitor — developer entry points.
-# `seed` and `demo` targets are added in Phases 1 and 6 (see docs/DECISIONS.md).
 
 SHELL := /bin/bash
 BACKEND := backend
 FRONTEND := frontend
+export DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm
+export TEST_DATABASE_URL ?= postgresql+psycopg://idm:idm@localhost:5432/idm_test
 
-.PHONY: help install db db-down dev backend frontend test test-backend test-frontend lint
+.PHONY: help install db db-down data seed dev backend frontend test test-backend test-frontend lint
 
 help:
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-15s %s\n", $$1, $$2}'
@@ -19,6 +20,12 @@ db: ## Start Postgres + pgvector and wait until healthy
 
 db-down: ## Stop Postgres
 	docker compose down
+
+data: ## Regenerate the synthetic dataset into backend/data/
+	cd $(BACKEND) && uv run python -m scripts.generate_data
+
+seed: db data ## Migrate the database and load the synthetic dataset
+	cd $(BACKEND) && uv run python -m scripts.seed
 
 backend: ## Run the FastAPI dev server on :8000
 	cd $(BACKEND) && uv run uvicorn app.main:app --reload --port 8000
