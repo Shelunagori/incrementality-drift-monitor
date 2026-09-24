@@ -11,6 +11,15 @@ from app.llm.provider import (
     get_embedding_model,
 )
 
+PROVIDER_ENV = ("LLM_PROVIDER", "EMBEDDING_PROVIDER", "OLLAMA_MODEL", "OLLAMA_EMBEDDING_MODEL")
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_provider_env(monkeypatch):
+    """These tests are about code defaults; CI sets LLM_PROVIDER=fake globally."""
+    for var in PROVIDER_ENV:
+        monkeypatch.delenv(var, raising=False)
+
 
 def test_default_is_ollama():
     s = Settings(_env_file=None)
