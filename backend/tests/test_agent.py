@@ -260,3 +260,24 @@ def test_agent_api_reports_missing_key(client, monkeypatch):
         assert resp.status_code == 503 and "OPENAI_API_KEY" in resp.json()["detail"]
     finally:
         get_settings.cache_clear()
+
+
+def test_prompts_ask_for_display_formats():
+    from app.agent import prompts
+
+    for prompt in (prompts.RULES, prompts.CHAT_SYSTEM):
+        assert "DD-MM-YYYY" in prompt
+        assert "$1,351,755" in prompt
+
+
+def test_template_answer_uses_display_formats(session):
+    _at(session, 510)
+    result = graph.chat(
+        TemplateChatModel(),
+        _ctx(session),
+        [{"role": "user", "content": "Can you propose a retest for meta?"}],
+    )
+    assert result.passed, result.violations
+    assert re.search(r"estimated cost \$\d{1,3}(,\d{3})+ ", result.answer)
+    assert re.search(r"ended \d{2}-\d{2}-\d{4} ", result.answer)
+    assert not re.search(r"\d{4}-\d{2}-\d{2}", result.answer.split("Drift summary")[0])

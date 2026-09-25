@@ -39,7 +39,7 @@ describe("traffic light logic", () => {
   });
 
   it("labels evidence age", () => {
-    expect(evidenceLabel(channel())).toBe("Last test 2025-02-04 (110 days ago)");
+    expect(evidenceLabel(channel())).toBe("Last test 04-02-2025 (110 days ago)");
     expect(evidenceLabel(channel({ last_evidence: null, evidence_age_days: null }))).toBe("Never tested");
   });
 
@@ -48,7 +48,7 @@ describe("traffic light logic", () => {
     expect(screen.getByRole("heading", { name: "Meta" })).toBeInTheDocument();
     expect(screen.getByText("72")).toBeInTheDocument();
     expect(screen.getByText("Drift detected")).toBeInTheDocument();
-    expect(screen.getByText(/Changepoint 2025-05-04/)).toBeInTheDocument();
+    expect(screen.getByText(/Changepoint 04-05-2025/)).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/channels/meta");
   });
 });

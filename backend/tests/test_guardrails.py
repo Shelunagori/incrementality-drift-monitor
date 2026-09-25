@@ -58,3 +58,57 @@ def test_list_markers_and_text_without_numbers_ok():
     ans = "1. Hypothesis: creative fatigue.\n2. Hypothesis: a competitor launched."
     assert check_answer(ans, RECS).passed
     assert mentions_hypotheses(ans)
+
+
+# --- display formats: DD-MM-YYYY dates, $ with thousands separators ---------------------------
+
+COST = [
+    ToolRecord(
+        "T3",
+        "draft_retest_proposal",
+        {},
+        {
+            "estimated_cost": 1351754.95,
+            "expected_lost_conversions": 22529.2,
+            "end_date": "2025-02-04",
+        },
+    )
+]
+
+
+def test_dd_mm_yyyy_date_matches_iso_in_tool_output():
+    assert check_answer("The test ended on 04-02-2025 [T2].", RECS).passed
+
+
+def test_iso_date_from_model_still_accepted():
+    assert check_answer("The test ended on 2025-02-04 [T2].", RECS).passed
+
+
+def test_wrong_date_rejected_in_either_format():
+    for ans in (
+        "The test ended on 05-02-2025 [T2].",
+        "The test ended on 2025-02-05 [T2].",
+        "The test ended on 02-04-2025 [T2].",
+    ):  # month/day swapped is a different date
+        res = check_answer(ans, RECS)
+        assert not res.passed, ans
+        assert "date" in res.violations[0]
+
+
+def test_impossible_date_rejected():
+    assert not check_answer("It ended on 31-02-2025 [T2].", RECS).passed
+
+
+def test_dd_mm_yyyy_date_is_not_split_into_numbers():
+    res = check_answer("Changepoint on 04-05-2025 [T1].", RECS)
+    assert res.passed, res.violations  # T1 summary has 2025-05-04
+
+
+def test_formatted_money_and_counts_match_raw_values():
+    ans = "The retest costs about $1,351,755 and loses 22,529 conversions [T3]."
+    assert check_answer(ans, COST).passed
+
+
+def test_wrong_formatted_money_rejected():
+    res = check_answer("The retest costs about $1,350,000 [T3].", COST)
+    assert not res.passed and "1,350,000" in res.violations[0]

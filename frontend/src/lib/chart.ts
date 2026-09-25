@@ -1,5 +1,6 @@
 /** Data shaping for the effectiveness chart (pure, unit-tested). */
 
+import { formatDate } from "./format";
 import type { Timeline } from "./types";
 
 export interface ChartPoint {
@@ -30,12 +31,12 @@ export function markers(t: Timeline): Marker[] {
     const d = snap(cp.date, t);
     if (d) {
       const pct = Math.round(cp.relative_magnitude * 100);
-      out.push({ kind: "changepoint", date: d, label: `Changepoint ${cp.date} (${pct > 0 ? "+" : ""}${pct}%)` });
+      out.push({ kind: "changepoint", date: d, label: `Changepoint ${formatDate(cp.date)} (${pct > 0 ? "+" : ""}${pct}%)` });
     }
   }
   for (const ref of t.ledger) {
     const d = snap(ref.entry.end_date, t);
-    if (d) out.push({ kind: "test", date: d, label: `Test ended ${ref.entry.end_date}` });
+    if (d) out.push({ kind: "test", date: d, label: `Test ended ${formatDate(ref.entry.end_date)}` });
   }
   return out;
 }

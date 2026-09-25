@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import { chartData, markers } from "@/lib/chart";
+import { formatDate } from "@/lib/format";
 import type { Timeline } from "@/lib/types";
 
 const COLORS = { line: "#0f172a", band: "#94a3b8", changepoint: "#dc2626", test: "#2563eb" };
@@ -33,9 +34,11 @@ export function EffectivenessChart({
   const chart = (
     <ComposedChart data={data} width={width} height={height} margin={{ top: 16, right: 16 }}>
       <CartesianGrid stroke="#e2e8f0" vertical={false} />
-      <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={40} />
+      <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={40} tickFormatter={formatDate} />
       <YAxis tick={{ fontSize: 11 }} width={40} />
-      <Tooltip formatter={(v) => (Array.isArray(v) ? v.map((x) => Number(x).toFixed(2)).join(" – ") : Number(v).toFixed(2))} />
+      <Tooltip
+        labelFormatter={(label) => formatDate(String(label))}
+        formatter={(v) => (Array.isArray(v) ? v.map((x) => Number(x).toFixed(2)).join(" – ") : Number(v).toFixed(2))} />
       <Area dataKey="band" stroke="none" fill={COLORS.band} fillOpacity={0.3} name="95% CI" isAnimationActive={false} />
       <Line dataKey="iroas" stroke={COLORS.line} dot={false} strokeWidth={2} name="iROAS" isAnimationActive={false} />
       {marks.map((m) => (

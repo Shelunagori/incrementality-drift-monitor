@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { formatDate } from "@/lib/format";
 import type { Clock } from "@/lib/types";
 
 /** "Advance 30 days" button plus a timeline scrubber over the simulated clock. */
@@ -23,7 +24,7 @@ export function DemoControls({
       <div className="text-sm">
         <p className="text-slate-500">Simulated today</p>
         <p className="font-semibold">
-          {clock.date} <span className="font-normal text-slate-500">(day {clock.day})</span>
+          {formatDate(clock.date)} <span className="font-normal text-slate-500">(day {clock.day})</span>
         </p>
       </div>
       <input

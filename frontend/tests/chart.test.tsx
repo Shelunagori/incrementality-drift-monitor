@@ -23,14 +23,22 @@ describe("chart data and markers", () => {
 
   it("creates one marker per changepoint and per ledger test", () => {
     expect(markers(timeline())).toEqual([
-      { kind: "changepoint", date: "2025-05-04", label: "Changepoint 2025-05-04 (-29%)" },
-      { kind: "test", date: "2025-02-05", label: "Test ended 2025-02-04" },
+      { kind: "changepoint", date: "2025-05-04", label: "Changepoint 04-05-2025 (-29%)" },
+      { kind: "test", date: "2025-02-05", label: "Test ended 04-02-2025" },
     ]);
   });
 
   it("renders markers in the chart legend", () => {
     render(<EffectivenessChart timeline={timeline()} width={600} height={300} />);
-    expect(screen.getByTestId("marker-changepoint")).toHaveTextContent("Changepoint 2025-05-04");
-    expect(screen.getByTestId("marker-test")).toHaveTextContent("Test ended 2025-02-04");
+    expect(screen.getByTestId("marker-changepoint")).toHaveTextContent("Changepoint 04-05-2025");
+    expect(screen.getByTestId("marker-test")).toHaveTextContent("Test ended 04-02-2025");
+  });
+
+  it("formats x-axis ticks as DD-MM-YYYY", () => {
+    const { container } = render(<EffectivenessChart timeline={timeline()} width={600} height={300} />);
+    const ticks = Array.from(container.querySelectorAll(".recharts-xAxis .recharts-cartesian-axis-tick-value"))
+      .map((el) => el.textContent);
+    expect(ticks.length).toBeGreaterThan(0);
+    expect(ticks.every((t) => /^\d{2}-\d{2}-\d{4}$/.test(t ?? ""))).toBe(true);
   });
 });

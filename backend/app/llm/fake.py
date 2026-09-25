@@ -22,6 +22,18 @@ from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field
 
 DIM = 256
+
+
+def _dmy(iso: str) -> str:
+    """2025-05-04 -> 04-05-2025 (the display format the prompt asks models for)."""
+    y, m, d = iso[:10].split("-")
+    return f"{d}-{m}-{y}"
+
+
+def _money(x: float) -> str:
+    return f"${round(x):,}"
+
+
 BLOCK = re.compile(r"\[(T\d+)\] (\w+)\((.*?)\)\n```json\n(.*?)\n```", re.S)
 
 
@@ -131,7 +143,7 @@ class TemplateChatModel(BaseChatModel):
                 test = out.get("latest_test")
                 if test:
                     lines.append(
-                        f"The latest test ({test['test_name']}) ended {test['end_date']} and "
+                        f"The latest test ({test['test_name']}) ended {_dmy(test['end_date'])} and "
                         f"measured iROAS {test['iroas_estimate']} [{tid}]."
                     )
             if tool == "get_channel_timeline" and out.get("posterior_shift"):
@@ -145,14 +157,15 @@ class TemplateChatModel(BaseChatModel):
             if tool == "get_channel_timeline" and out.get("relevant_changepoint"):
                 cp = out["relevant_changepoint"]
                 lines.append(
-                    f"A changepoint was detected around {cp['date']} ({cp['direction']}) "
+                    f"A changepoint was detected around {_dmy(cp['date'])} ({cp['direction']}) "
                     f"after the last test [{tid}]."
                 )
             if tool == "draft_retest_proposal" and "proposal_id" in out:
                 lines.append(
                     f"I drafted retest proposal #{out['proposal_id']}: "
                     f"{out['duration_days']} days, "
-                    f"estimated cost ${out['estimated_cost']} [{tid}]. It needs human approval."
+                    f"estimated cost {_money(out['estimated_cost'])} [{tid}]. "
+                    "It needs human approval."
                 )
             if tool == "draft_retest_proposal" and "error" in out:
                 lines.append(f"I could not draft a proposal: {out['error']}")

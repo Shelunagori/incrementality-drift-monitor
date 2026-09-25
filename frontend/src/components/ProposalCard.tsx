@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { fmt } from "@/lib/status";
+import { count, formatDate, money, pct } from "@/lib/format";
 import type { Proposal } from "@/lib/types";
 
 import { AuditTrail } from "./AuditTrail";
@@ -46,7 +46,7 @@ export function ProposalCard({
           {proposal.status}
         </span>
       </header>
-      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+      <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-5">
         <div>
           <dt className="text-slate-500">Duration</dt>
           <dd data-testid="duration">{p.duration_days} days</dd>
@@ -54,16 +54,20 @@ export function ProposalCard({
         <div>
           <dt className="text-slate-500">Target MDE</dt>
           <dd data-testid="mde">
-            {fmt.pct(p.target_mde)} <span className="text-slate-500">(achieved {fmt.pct(p.achieved_mde)})</span>
+            {pct(p.target_mde)} <span className="text-slate-500">(achieved {pct(p.achieved_mde)})</span>
           </dd>
         </div>
         <div>
           <dt className="text-slate-500">Expected cost</dt>
-          <dd data-testid="cost">{fmt.money(p.estimated_cost)}</dd>
+          <dd data-testid="cost">{money(p.estimated_cost)}</dd>
         </div>
         <div>
           <dt className="text-slate-500">Spend saved</dt>
-          <dd>{fmt.money(p.saved_spend)}</dd>
+          <dd>{money(p.saved_spend)}</dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Expected lost conversions</dt>
+          <dd data-testid="lost">{count(p.expected_lost_conversions)}</dd>
         </div>
       </dl>
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
@@ -84,7 +88,8 @@ export function ProposalCard({
       {proposal.rationale && <p className="mt-2 text-sm text-slate-600">Rationale: {proposal.rationale}</p>}
       {proposal.scheduled_test && (
         <p className="mt-2 text-sm text-emerald-700" data-testid="scheduled">
-          Scheduled: {proposal.scheduled_test.start_date} → {proposal.scheduled_test.end_date}
+          Scheduled: {formatDate(proposal.scheduled_test.start_date)} →{" "}
+          {formatDate(proposal.scheduled_test.end_date)}
         </p>
       )}
       {proposal.status === "pending" && (onApprove || onReject) && (

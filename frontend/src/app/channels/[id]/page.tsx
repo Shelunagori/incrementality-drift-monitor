@@ -9,6 +9,7 @@ import { LedgerTable } from "@/components/LedgerTable";
 import { ProposalCard } from "@/components/ProposalCard";
 import { TrafficLight } from "@/components/TrafficLight";
 import { api } from "@/lib/api";
+import { formatDate, formatDatesInText } from "@/lib/format";
 import { canProposeRetest, STATUS_STYLES } from "@/lib/status";
 import type { AgentResponse, LedgerEntry, Proposal, Timeline } from "@/lib/types";
 
@@ -60,11 +61,11 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
         <div>
           <h1 className="text-2xl font-semibold">{timeline.display_name}</h1>
           <p className="text-sm text-slate-600">
-            {style.label} · score {timeline.score} · as of {timeline.as_of_date}
+            {style.label} · score {timeline.score} · as of {formatDate(timeline.as_of_date)}
           </p>
           <ul className="mt-1 text-xs text-slate-500">
             {timeline.reasons.map((r) => (
-              <li key={r.code}>{r.message}</li>
+              <li key={r.code}>{formatDatesInText(r.message)}</li>
             ))}
           </ul>
         </div>

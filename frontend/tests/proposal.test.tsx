@@ -12,6 +12,7 @@ describe("ProposalCard", () => {
     expect(screen.getByTestId("control")).toHaveTextContent("Chicago, Boston");
     expect(screen.getByTestId("duration")).toHaveTextContent("51 days");
     expect(screen.getByTestId("cost")).toHaveTextContent("$1,351,755");
+    expect(screen.getByTestId("lost")).toHaveTextContent("22,529");
     expect(screen.getByTestId("mde")).toHaveTextContent("20% (achieved 20%)");
   });
 
@@ -35,7 +36,7 @@ describe("ProposalCard", () => {
     });
     render(<ProposalCard proposal={approved} onApprove={vi.fn()} onReject={vi.fn()} showAudit />);
     expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
-    expect(screen.getByTestId("scheduled")).toHaveTextContent("2025-06-01 → 2025-07-22");
+    expect(screen.getByTestId("scheduled")).toHaveTextContent("01-06-2025 → 22-07-2025");
     expect(screen.getByText("created")).toBeInTheDocument();
   });
 

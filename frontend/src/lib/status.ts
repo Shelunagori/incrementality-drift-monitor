@@ -1,5 +1,6 @@
 /** Traffic-light presentation logic (pure, unit-tested). */
 
+import { formatDate } from "./format";
 import type { ChannelSummary, Status } from "./types";
 
 export const STATUS_STYLES: Record<Status, { dot: string; ring: string; label: string }> = {
@@ -25,18 +26,10 @@ export function canProposeRetest(status: Status): boolean {
 
 export function evidenceLabel(c: Pick<ChannelSummary, "last_evidence" | "evidence_age_days">): string {
   if (!c.last_evidence) return "Never tested";
-  return `Last test ${c.last_evidence.end_date} (${c.evidence_age_days} days ago)`;
+  return `Last test ${formatDate(c.last_evidence.end_date)} (${c.evidence_age_days} days ago)`;
 }
 
 /** Order for the dashboard: most urgent first, then highest score. */
 export function byUrgency(a: ChannelSummary, b: ChannelSummary): number {
   return litLamp(a.status) - litLamp(b.status) || b.score - a.score;
 }
-
-export const fmt = {
-  iroas: (x: number) => x.toFixed(2),
-  money: (x: number) =>
-    x.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }),
-  pct: (x: number) => `${Math.round(x * 100)}%`,
-  int: (x: number) => Math.round(x).toLocaleString("en-US"),
-};

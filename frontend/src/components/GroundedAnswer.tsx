@@ -1,3 +1,4 @@
+import { formatDatesInText } from "@/lib/format";
 import type { AgentResponse } from "@/lib/types";
 
 const TAG = /(\[T\d+\])/g;
@@ -21,7 +22,7 @@ export function GroundedAnswer({ response }: { response: AgentResponse }) {
                 {id}
               </span>
             ) : (
-              <span key={j}>{part}</span>
+              <span key={j}>{formatDatesInText(part)}</span>
             );
           })}
         </p>
