@@ -104,6 +104,35 @@ Next.js app. No queues, no cache, no scheduler. A simulated clock replaces a cro
 demo can move through time. Every extra moving part would have been something to operate and
 explain without making the core idea any more convincing.
 
+## Deployment
+
+The live demo runs on free tiers: the FastAPI container on **Railway** (built from
+`backend/Dockerfile`; on start it migrates, seeds only an empty database, then serves), Postgres
+with **pgvector** on **Supabase** (session pooler URL; the first migration creates the extension),
+and the Next.js app on **Vercel**. A GitHub Actions job pings `/health` every three days so the
+free tiers are not paused.
+
+**Cloudflare Workers AI is the primary LLM, Gemini the fallback.** Gemini was the first choice,
+but its free tier allowed about 20 requests a day for the flash model, and one demo uses several.
+Billing was deliberately not enabled. Cloudflare's `llama-3.3-70b-instruct-fp8-fast` now answers
+chat and explanations, and `@cf/baai/bge-m3` produces the embeddings for methodology search.
+Getting Cloudflare to work with tools needed one adapter: its OpenAI-compatible endpoint only
+accepts string message content, while LangChain sends `null` or a list of parts in some
+messages. A small subclass rewrites the request for Cloudflare only; the other providers are
+untouched and a test guards that.
+
+**When a model fails, the statistics still work.** The providers form a chain
+(`LLM_FALLBACK_PROVIDERS=cloudflare,gemini`). Rate limits, overloads, server errors, timeouts
+and connection errors are retried twice (1s, 3s), then the next provider is tried; errors like
+"model not found" skip straight on. Every answer, from any provider, goes through the same
+grounding check, and the response names the provider that wrote it. If every provider fails,
+the API returns a JSON 503 (`llm_unavailable`) from a FastAPI exception handler. That detail
+matters: an unhandled exception becomes a bare 500 without CORS headers, which the browser
+reports as "Failed to fetch"; the handler keeps the CORS headers, so the UI shows a calm
+"AI explanation temporarily unavailable — statistics are unaffected" with a Retry button.
+Embeddings have retries but no fallback, because vectors from different models cannot share an
+index; if they fail, the explanation continues without the methodology search.
+
 ## The three hardest questions
 
 ### 1. "Your engine uses the true adstock and saturation parameters. Isn't the detection circular?"

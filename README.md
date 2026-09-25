@@ -2,6 +2,9 @@
 
 **Your incrementality test result has an expiry date. Nobody tells you when it passes. This does.**
 
+- **App:** https://incrementality-drift-monitor.vercel.app
+- **API:** https://incrementality-drift-monitor-production.up.railway.app/health
+
 > All data in this repository is **synthetic**, generated with drift planted on purpose so the
 > demo can show detection against a known truth.
 
