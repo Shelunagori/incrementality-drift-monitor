@@ -149,8 +149,10 @@ explicit output limit (`LLM_MAX_TOKENS`, default 1024). The grounding check appl
 to every provider's answer. If all fail, `/agent/*` returns a JSON 503 (`llm_unavailable`) with
 CORS headers; statistics endpoints are unaffected.
 
-`EMBEDDING_PROVIDER` takes the same values except `cloudflare` (`anthropic` uses Voyage AI with `VOYAGE_API_KEY`,
-since Anthropic has no embeddings API). A missing key fails with a message naming the variable.
+`EMBEDDING_PROVIDER` takes the same values (`anthropic` uses Voyage AI with `VOYAGE_API_KEY`,
+since Anthropic has no embeddings API; `cloudflare` uses `@cf/baai/bge-m3`, `CF_EMBEDDING_MODEL`).
+Embeddings have no fallback chain; switching provider re-indexes the methodology search once,
+automatically. A missing key fails with a message naming the variable.
 
 ## Deploy (Railway + Supabase + Gemini)
 
@@ -173,8 +175,8 @@ the database is empty, then serves uvicorn on `$PORT`.
 | `GEMINI_API_KEY` | your Gemini API key |
 | `GEMINI_MODEL` | `gemini-3.8-flash` (default; `gemini-2.5-flash` returns 404 for new keys) |
 | `LLM_FALLBACK_PROVIDERS` | recommended `cloudflare,gemini` (needs `CF_ACCOUNT_ID`, `CF_API_TOKEN`): Cloudflare primary, Gemini backup |
-| `EMBEDDING_PROVIDER` | `gemini` — **required**: the default is `ollama`, which does not exist on Railway |
-| `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` — set it explicitly |
+| `EMBEDDING_PROVIDER` | `cloudflare` or `gemini` — **required**: the default is `ollama`, which does not exist on Railway |
+| `CF_EMBEDDING_MODEL` / `GEMINI_EMBEDDING_MODEL` | `@cf/baai/bge-m3` / `models/gemini-embedding-001` — set the one you use explicitly |
 | `CORS_ORIGINS` | your Vercel URL(s), comma-separated |
 | `DEMO_RESET_TOKEN` | a long random string; enables `POST /demo/reset` |
 | `AGENT_RATE_LIMIT_PER_MIN` | optional, default `10` requests per IP per minute on `/agent/*` |
@@ -183,8 +185,9 @@ the database is empty, then serves uvicorn on `$PORT`.
 when this was deployed (limits are per Google Cloud project, reset at midnight Pacific time,
 and change over time; check [AI Studio](https://aistudio.google.com/rate-limit)). One explain is
 1–2 chat calls and one chat turn 2–4, so the free tier runs out within a few demos; that is why
-Cloudflare is the primary chat provider and Gemini the backup. Embeddings still use Gemini
-(one query embedding per explain after the first index build).
+Cloudflare is the primary chat provider and Gemini the backup. With `EMBEDDING_PROVIDER=gemini`
+embeddings also draw on the Gemini quota (one query embedding per explain after the first index
+build); `EMBEDDING_PROVIDER=cloudflare` removes that dependency.
 
 `PORT` is set by Railway. Useful endpoints: `GET /health` → `{"status","db","clock_day"}`
 (503 if the database is unreachable) and

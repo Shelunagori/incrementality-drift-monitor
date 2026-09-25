@@ -6,7 +6,9 @@ Sources:
   but they are returned flagged as untrusted data, never as instructions.
 
 Indexing is incremental: a chunk is embedded only if (model, source, ref, content hash) is new;
-stale chunks of the same source are deleted.
+stale chunks are deleted. Vectors from any other embedding model are dropped first, so switching
+EMBEDDING_PROVIDER (e.g. Gemini -> Cloudflare bge-m3) re-indexes once and never mixes
+dimensions. Re-running with the same model embeds nothing.
 """
 
 from __future__ import annotations
@@ -65,6 +67,7 @@ def sync_index(
 ) -> int:
     """Bring the index for `model_id` up to date. Returns the number of chunks embedded."""
     wanted = chunk_markdown(methodology.read_text()) + ledger_chunks(session)
+    session.execute(delete(KnowledgeChunk).where(KnowledgeChunk.embedding_model != model_id))
     existing = session.scalars(
         select(KnowledgeChunk).where(KnowledgeChunk.embedding_model == model_id)
     ).all()

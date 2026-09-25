@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     cf_account_id: str = ""  # Cloudflare Workers AI (chat only, OpenAI-compatible endpoint)
     cf_api_token: str = ""
     cf_model: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+    cf_embedding_model: str = "@cf/baai/bge-m3"  # 1024-dim, via /ai/v1/embeddings
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"

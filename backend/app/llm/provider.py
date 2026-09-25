@@ -20,7 +20,7 @@ from app.llm.resilient import FallbackChatModel
 log = logging.getLogger("app.llm")
 
 PROVIDERS = ("ollama", "anthropic", "gemini", "openai", "cloudflare", "fake")
-EMBEDDING_PROVIDERS = ("ollama", "anthropic", "gemini", "openai", "fake")
+EMBEDDING_PROVIDERS = ("ollama", "anthropic", "gemini", "openai", "cloudflare", "fake")
 CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1"
 
 
@@ -153,6 +153,18 @@ def get_embedding_model(settings: Settings | None = None) -> Embeddings:
 
         key = _require(s.openai_api_key, "OPENAI_API_KEY", name)
         return OpenAIEmbeddings(model=s.openai_embedding_model, api_key=key)
+    if name == "cloudflare":
+        from langchain_openai import OpenAIEmbeddings
+
+        account = _require(s.cf_account_id, "CF_ACCOUNT_ID", "cloudflare embeddings")
+        token = _require(s.cf_api_token, "CF_API_TOKEN", "cloudflare embeddings")
+        return OpenAIEmbeddings(
+            model=s.cf_embedding_model,
+            api_key=token,
+            base_url=CLOUDFLARE_BASE_URL.format(account_id=account),
+            check_embedding_ctx_length=False,  # send raw strings; CF does not take token ids
+            max_retries=0,  # RetryingEmbeddings owns retries
+        )
     from app.llm.fake import HashingEmbeddings
 
     return HashingEmbeddings()
@@ -167,6 +179,7 @@ def embedding_model_id(settings: Settings | None = None) -> str:
         "anthropic": s.voyage_model,
         "gemini": s.gemini_embedding_model,
         "openai": s.openai_embedding_model,
+        "cloudflare": s.cf_embedding_model,
         "fake": "hashing-256",
     }[name]
     return f"{name}:{model}"

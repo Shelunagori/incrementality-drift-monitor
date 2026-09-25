@@ -199,11 +199,12 @@ def test_cloudflare_missing_config(kw, missing):
         get_chat_model(Settings(_env_file=None, **kw), "cloudflare")
 
 
-def test_cloudflare_is_not_an_embedding_provider():
+def test_unknown_embedding_provider_is_rejected():
+    # cloudflare became an embedding provider in phase 8E; unknown names still fail clearly.
     from app.llm.provider import get_embedding_model
 
     with pytest.raises(ProviderConfigError, match="EMBEDDING_PROVIDER"):
-        get_embedding_model(Settings(_env_file=None, embedding_provider="cloudflare"))
+        get_embedding_model(Settings(_env_file=None, embedding_provider="llamafile"))
 
 
 def test_sdk_retries_disabled_inside_chain():
