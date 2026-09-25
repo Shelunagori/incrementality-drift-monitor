@@ -184,7 +184,7 @@ def test_bind_tools_reaches_every_provider_and_reports_provider(sleeps):
 def test_cloudflare_provider_uses_openai_compatible_endpoint():
     s = Settings(_env_file=None, cf_account_id="acc123", cf_api_token="tok")
     m = get_chat_model(s, "cloudflare")
-    assert type(m).__name__ == "ChatOpenAI"
+    assert type(m).__name__ == "CloudflareChatOpenAI"  # a ChatOpenAI subclass (phase 8D)
     assert m.openai_api_base == "https://api.cloudflare.com/client/v4/accounts/acc123/ai/v1"
     assert m.model_name == "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
     assert m.max_retries == 0

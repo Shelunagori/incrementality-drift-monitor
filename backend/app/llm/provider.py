@@ -93,11 +93,11 @@ def get_chat_model(settings: Settings | None = None, name: str | None = None) ->
             timeout=timeout,
         )
     if name == "cloudflare":
-        from langchain_openai import ChatOpenAI
+        from app.llm.cloudflare import CloudflareChatOpenAI
 
         account = _require(s.cf_account_id, "CF_ACCOUNT_ID", name)
         token = _require(s.cf_api_token, "CF_API_TOKEN", name)
-        return ChatOpenAI(
+        return CloudflareChatOpenAI(
             model=s.cf_model,
             api_key=token,
             temperature=t,

@@ -142,7 +142,7 @@ One env var switches the model (`.env`, see `.env.example`):
 | `cloudflare` (chat only) | `CF_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast` | `CF_ACCOUNT_ID`, `CF_API_TOKEN` |
 | `fake` | offline template writer | – |
 
-**Resilience:** set `LLM_FALLBACK_PROVIDERS=gemini,cloudflare` to chain providers. Rate limits,
+**Resilience:** set `LLM_FALLBACK_PROVIDERS=cloudflare,gemini` (recommended) to chain providers. Rate limits,
 overloads, timeouts and connection errors are retried twice (1s, 3s), then the next provider is
 tried; the API response names the one that answered in `provider`. Every provider gets an
 explicit output limit (`LLM_MAX_TOKENS`, default 1024). The grounding check applies
@@ -172,12 +172,19 @@ the database is empty, then serves uvicorn on `$PORT`.
 | `LLM_PROVIDER` | `gemini` |
 | `GEMINI_API_KEY` | your Gemini API key |
 | `GEMINI_MODEL` | `gemini-3.8-flash` (default; `gemini-2.5-flash` returns 404 for new keys) |
-| `LLM_FALLBACK_PROVIDERS` | optional, e.g. `gemini,cloudflare` (needs `CF_ACCOUNT_ID`, `CF_API_TOKEN`) |
+| `LLM_FALLBACK_PROVIDERS` | recommended `cloudflare,gemini` (needs `CF_ACCOUNT_ID`, `CF_API_TOKEN`): Cloudflare primary, Gemini backup |
 | `EMBEDDING_PROVIDER` | `gemini` — **required**: the default is `ollama`, which does not exist on Railway |
 | `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` — set it explicitly |
 | `CORS_ORIGINS` | your Vercel URL(s), comma-separated |
 | `DEMO_RESET_TOKEN` | a long random string; enables `POST /demo/reset` |
 | `AGENT_RATE_LIMIT_PER_MIN` | optional, default `10` requests per IP per minute on `/agent/*` |
+
+**Gemini free tier:** `gemini-3.8-flash` allowed about **20 requests per day** on the free tier
+when this was deployed (limits are per Google Cloud project, reset at midnight Pacific time,
+and change over time; check [AI Studio](https://aistudio.google.com/rate-limit)). One explain is
+1–2 chat calls and one chat turn 2–4, so the free tier runs out within a few demos; that is why
+Cloudflare is the primary chat provider and Gemini the backup. Embeddings still use Gemini
+(one query embedding per explain after the first index build).
 
 `PORT` is set by Railway. Useful endpoints: `GET /health` → `{"status","db","clock_day"}`
 (503 if the database is unreachable) and
