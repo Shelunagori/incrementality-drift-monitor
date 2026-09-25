@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+import { AgentUnavailableNotice } from "@/components/AgentUnavailableNotice";
 import { EffectivenessChart } from "@/components/EffectivenessChart";
 import { GroundedAnswer } from "@/components/GroundedAnswer";
 import { LedgerTable } from "@/components/LedgerTable";
 import { ProposalCard } from "@/components/ProposalCard";
 import { TrafficLight } from "@/components/TrafficLight";
-import { api } from "@/lib/api";
+import { api, isLlmUnavailable } from "@/lib/api";
 import { formatDate, formatDatesInText } from "@/lib/format";
 import { canProposeRetest, STATUS_STYLES } from "@/lib/status";
 import type { AgentResponse, LedgerEntry, Proposal, Timeline } from "@/lib/types";
@@ -21,6 +22,7 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [busy, setBusy] = useState<"explain" | "propose" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiDown, setAiDown] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -39,14 +41,18 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
   const run = async (kind: "explain" | "propose", fn: () => Promise<void>) => {
     setBusy(kind);
     setError(null);
+    if (kind === "explain") setAiDown(false);
     try {
       await fn();
     } catch (e) {
-      setError((e as Error).message);
+      if (kind === "explain" && isLlmUnavailable(e)) setAiDown(true);
+      else setError((e as Error).message);
     } finally {
       setBusy(null);
     }
   };
+
+  const explain = () => run("explain", async () => setExplanation(await api.explain(params.id)));
 
   if (!timeline) return <p className="text-sm text-slate-500">{error ?? "Loading…"}</p>;
   const style = STATUS_STYLES[timeline.status];
@@ -76,7 +82,7 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
       </section>
       <section className="flex flex-wrap gap-2">
         <button
-          onClick={() => run("explain", async () => setExplanation(await api.explain(params.id)))}
+          onClick={explain}
           disabled={busy !== null}
           className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
@@ -91,7 +97,8 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
           {busy === "propose" ? "Designing…" : "Propose retest"}
         </button>
       </section>
-      {explanation && (
+      {aiDown && <AgentUnavailableNotice onRetry={explain} busy={busy !== null} />}
+      {explanation && !aiDown && (
         <section className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
           <h2 className="mb-2 font-semibold">AI explanation</h2>
           <GroundedAnswer response={explanation} />

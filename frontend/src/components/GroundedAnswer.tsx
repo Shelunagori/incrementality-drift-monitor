@@ -34,6 +34,7 @@ export function GroundedAnswer({ response }: { response: AgentResponse }) {
           </span>
         ))}
       </div>
+      {response.provider && <p className="text-xs text-slate-400">answered by {response.provider}</p>}
       {response.fallback && (
         <p className="text-xs text-amber-700">
           The model&apos;s answer failed the grounding check twice; showing a template answer built from tool outputs.

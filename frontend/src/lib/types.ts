@@ -163,6 +163,8 @@ export interface AgentResponse {
   fallback: boolean;
   violations: string[];
   proposal_ids: number[];
+  /** Chat provider that produced the final answer (null if unknown). */
+  provider?: string | null;
 }
 
 export interface Clock {

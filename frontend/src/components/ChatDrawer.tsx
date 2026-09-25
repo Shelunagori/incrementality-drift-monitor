@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 
-import { api } from "@/lib/api";
+import { api, isLlmUnavailable } from "@/lib/api";
 import type { AgentResponse, ChatMessage } from "@/lib/types";
 
+import { AgentUnavailableNotice } from "./AgentUnavailableNotice";
 import { GroundedAnswer } from "./GroundedAnswer";
 
 interface Turn {
@@ -19,6 +20,23 @@ export function ChatDrawer() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** History of a request that failed with llm_unavailable, kept for Retry. */
+  const [retryHistory, setRetryHistory] = useState<ChatMessage[] | null>(null);
+
+  const ask = async (history: ChatMessage[]) => {
+    setBusy(true);
+    setError(null);
+    setRetryHistory(null);
+    try {
+      const res = await api.chat(history);
+      setTurns((t) => [...t, { message: { role: "assistant", content: res.answer }, response: res }]);
+    } catch (e) {
+      if (isLlmUnavailable(e)) setRetryHistory(history);
+      else setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const send = async () => {
     const text = input.trim();
@@ -26,16 +44,7 @@ export function ChatDrawer() {
     const history = [...turns.map((t) => t.message), { role: "user" as const, content: text }];
     setTurns((t) => [...t, { message: { role: "user", content: text } }]);
     setInput("");
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await api.chat(history);
-      setTurns((t) => [...t, { message: { role: "assistant", content: res.answer }, response: res }]);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    await ask(history);
   };
 
   return (
@@ -77,6 +86,7 @@ export function ChatDrawer() {
               </div>
             ))}
             {busy && <p className="text-sm text-slate-500">Thinking…</p>}
+            {retryHistory && <AgentUnavailableNotice onRetry={() => void ask(retryHistory)} busy={busy} />}
             {error && <p className="text-sm text-red-600">{error}</p>}
           </div>
           <form

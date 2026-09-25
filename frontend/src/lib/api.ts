@@ -17,9 +17,16 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Machine-readable error code from the body, e.g. "llm_unavailable". */
+    public code?: string,
   ) {
     super(message);
   }
+}
+
+/** True when every AI provider failed (backend JSON 503 `{error: "llm_unavailable"}`). */
+export function isLlmUnavailable(e: unknown): boolean {
+  return e instanceof ApiError && e.code === "llm_unavailable";
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -30,8 +37,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    const detail = typeof body.detail === "string" ? body.detail : res.statusText;
-    throw new ApiError(res.status, detail);
+    const code = typeof body.error === "string" ? body.error : undefined;
+    const detail =
+      typeof body.detail === "string"
+        ? body.detail
+        : typeof body.message === "string"
+          ? body.message
+          : res.statusText;
+    throw new ApiError(res.status, detail, code);
   }
   return res.json() as Promise<T>;
 }
