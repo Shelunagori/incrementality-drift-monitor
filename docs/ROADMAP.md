@@ -64,3 +64,19 @@ another.
   model on a schedule.
 - Observability: engine run times, detector decisions per channel, guardrail rejections and
   fallbacks.
+
+## Pending items
+
+Found while making the backend deployable (Phase 1 of the Railway/Supabase/Gemini work).
+Recorded here, not fixed.
+
+| # | Found | Item | Why it matters |
+|---|---|---|---|
+| P1 | 2026-09-25 | `POST /demo/advance` and `POST /demo/set` have no auth (kept open on purpose so the UI works). | On a public URL anyone can move the shared demo clock; `/demo/reset` restores it. |
+| P2 | 2026-09-25 | When the grounding check fails twice, the rejected raw model answer is not returned, only the `violations` list. | Harder to debug a provider that keeps failing the check. |
+| P3 | 2026-09-25 | The agent rate limit keys on the first `X-Forwarded-For` hop (a client can set it) and lives in process memory. | Determined users can bypass it; limits reset on restart and are per worker. |
+| P4 | 2026-09-25 | GitHub Actions: Node 20 deprecation for `actions/checkout@v4` / `astral-sh/setup-uv@v5`; `ubuntu-latest` moves to Ubuntu 26 from 2026-10-19. | Warnings today, possible breakage later. |
+| P5 | 2026-09-25 | Google is restricting Gemini 2.5 models to existing users; new API keys may get 404 for `gemini-2.5-flash`. | Demo breaks if the key cannot use the model; `GEMINI_MODEL` is configurable. |
+| P6 | 2026-09-25 | The Docker image was not built in the dev sandbox (no Docker daemon); the start sequence was verified by running `start.sh` directly. | First Railway build is the real check. |
+| P7 | 2026-09-25 | The Supabase pooler URL was tested only in form (local Postgres with a plain `postgresql://` URL); no network access to Supabase from the sandbox. | Verify on first deploy. |
+| P8 | 2026-09-25 | `scripts.seed.load` truncates and reloads in separate transactions. | A crash mid-load leaves partial data (the next start's `--if-empty` reloads it). |

@@ -144,6 +144,37 @@ One env var switches the model (`.env`, see `.env.example`):
 `EMBEDDING_PROVIDER` takes the same values (`anthropic` uses Voyage AI with `VOYAGE_API_KEY`,
 since Anthropic has no embeddings API). A missing key fails with a message naming the variable.
 
+## Deploy (Railway + Supabase + Gemini)
+
+The backend ships as one container (`backend/Dockerfile`, built from the repo root; Railway
+reads `railway.toml`). On start it runs `alembic upgrade head`, seeds the synthetic data only if
+the database is empty, then serves uvicorn on `$PORT`.
+
+1. **Supabase**: create a project and copy the **session pooler** connection string
+   (`postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`).
+   The first migration runs `CREATE EXTENSION IF NOT EXISTS vector`.
+2. **Railway**: new service from this repo, then set the variables below. Health check: `/health`.
+3. **Keep-alive** (optional): add the repo secret `HEALTH_URL` =
+   `https://<app>.up.railway.app/health`. `.github/workflows/keepalive.yml` pings it every
+   3 days so the free tiers are not paused; it skips if the secret is missing.
+
+| Variable | Value |
+|---|---|
+| `DATABASE_URL` | Supabase session pooler string (plain `postgresql://` is fine) |
+| `LLM_PROVIDER` | `gemini` |
+| `GEMINI_API_KEY` | your Gemini API key |
+| `GEMINI_MODEL` | `gemini-2.5-flash` (or the model id Google AI Studio offers your key) |
+| `EMBEDDING_PROVIDER` | `gemini` — **required**: the default is `ollama`, which does not exist on Railway |
+| `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` — set it explicitly |
+| `CORS_ORIGINS` | your Vercel URL(s), comma-separated |
+| `DEMO_RESET_TOKEN` | a long random string; enables `POST /demo/reset` |
+| `AGENT_RATE_LIMIT_PER_MIN` | optional, default `10` requests per IP per minute on `/agent/*` |
+
+`PORT` is set by Railway. Useful endpoints: `GET /health` → `{"status","db","clock_day"}`
+(503 if the database is unreachable) and
+`curl -X POST $API/demo/reset -H "X-Demo-Token: $DEMO_RESET_TOKEN"` to put the demo back at
+day 460.
+
 ## Tests
 
 ```bash

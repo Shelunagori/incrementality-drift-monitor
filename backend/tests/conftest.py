@@ -83,8 +83,8 @@ def session_factory(seeded_engine):
     with seeded_engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE audit_events, scheduled_tests, proposals, channel_snapshots "
-                "RESTART IDENTITY CASCADE"
+                "TRUNCATE audit_events, scheduled_tests, proposals, channel_snapshots, "
+                "knowledge_chunks RESTART IDENTITY CASCADE"
             )
         )
         conn.execute(text("DELETE FROM evidence_ledger WHERE source <> 'seed'"))
@@ -100,7 +100,10 @@ def client(session_factory):
     from fastapi.testclient import TestClient
 
     from app.api.deps import db
+    from app.api.ratelimit import limiter
     from app.main import app
+
+    limiter.reset()  # every test starts with a fresh per-IP agent quota
 
     def _db():
         with session_factory() as s:

@@ -30,7 +30,8 @@ Honest list of what this POC does not do. Deferred items live here, not as TODOs
 
 ## Product / operations
 - No authentication or authorisation; `actor` is free text. Anyone who can reach the API can
-  approve.
+  approve or move the demo clock. Only `POST /demo/reset` is token-protected.
+- The agent rate limit is in-memory and per process (see ROADMAP pending items).
 - No real ad-platform integration: "execute" writes a `scheduled_tests` row, it does not
   change any campaign.
 - The recompute job is an endpoint, not a scheduler; there is no daily cron.

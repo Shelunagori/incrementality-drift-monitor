@@ -7,12 +7,24 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
+from app.db.url import normalize_database_url
+
+
+def build_engine(url: str) -> Engine:
+    """Engine with the pool sized for a small hosted Postgres (e.g. Supabase session pooler)."""
+    s = get_settings()
+    return create_engine(
+        normalize_database_url(url),
+        pool_size=s.db_pool_size,
+        max_overflow=s.db_max_overflow,
+        pool_pre_ping=True,
+    )
 
 
 @lru_cache
 def get_engine(url: str | None = None) -> Engine:
     """Return a cached engine for `url` (defaults to DATABASE_URL)."""
-    return create_engine(url or get_settings().database_url, pool_pre_ping=True)
+    return build_engine(url or get_settings().database_url)
 
 
 def get_session() -> Iterator[Session]:

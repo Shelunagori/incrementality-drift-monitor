@@ -44,3 +44,14 @@ Choices made where the brief was ambiguous. Each is vetoable — say the word an
 | 38 | 6 | The Makefile includes `.env` (if present) and exports it to all targets. | One place to switch providers for `make dev` / `make demo`. |
 | 39 | 6 | The demo script dry-runs day 460 and day 510 against the live API, prints both, then resets the clock to 460 for the live walkthrough (two "Advance 30 days" clicks reach day 520). | Printed story uses real engine output, not canned text. |
 | 40 | 6 | README screenshots are real, captured with Playwright against the running app (offline template model). | Better than placeholders; regenerate after UI changes. |
+| 41 | deploy | `GEMINI_API_KEY` and `GOOGLE_API_KEY` both accepted (aliases). | Gemini docs use the first, older code the second. |
+| 42 | deploy | `postgres://` / `postgresql://` URLs are rewritten to `postgresql+psycopg://` (app, Alembic, seed). Pool: size 5, overflow 2, pre-ping (env `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`). | Supabase/Railway hand out driverless URLs; psycopg2 is not installed. |
+| 43 | deploy | `backend/Dockerfile` built from the repo root (`railway.toml` points at it); synthetic CSVs generated at build time; uv pinned `<0.13`. | The agent reads `docs/METHODOLOGY.md`; faster first start. |
+| 44 | deploy | Seed on start only when any base table is empty (`seed --if-empty`); partial data triggers a full reload. | Safe to run on every container start. |
+| 45 | deploy | `POST /demo/reset`: 503 if `DEMO_RESET_TOKEN` is unset, 403 on a wrong or missing `X-Demo-Token`. Clears proposals, scheduled tests, audit events, snapshots and manual (non-seed) ledger rows; re-seeds if needed; then writes one `demo/reset` audit event. | A clean, repeatable demo start with its own audit record. |
+| 46 | deploy | Agent rate limit: 10/min per IP, sliding window, 429 + `Retry-After`; IP = first `X-Forwarded-For` hop. | Protects the Gemini quota; see pending item P3. |
+| 47 | deploy | `/health` runs `SELECT 1`: 200 `{status:"ok", db:"ok", clock_day}`, 503 with `db:"error"`; `clock_day` null before seeding. | Railway health check and keep-alive target. |
+| 48 | deploy | Keep-alive cron `0 6 */3 * *`; skips when `HEALTH_URL` is unset. | Every 3 days, as requested. |
+| 49 | deploy | One uvicorn worker with `--proxy-headers`. | Panel cache and rate limiter are in process memory. |
+| 50 | deploy | Default `GEMINI_EMBEDDING_MODEL` changed to `models/gemini-embedding-001`. | `text-embedding-004` was shut down by Google on 2026-01-14. |
+| 51 | deploy | Test fixtures now also clear `knowledge_chunks` and reset the rate limiter per test. | New tests exposed order-dependence in the RAG index test. |

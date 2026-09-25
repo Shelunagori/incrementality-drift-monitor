@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app import __doc__ as _pkg_doc
 from app.actions.errors import ActionError
-from app.api import agent, channels, jobs, ledger, proposals
+from app.api import agent, channels, health, jobs, ledger, proposals
 from app.config import get_settings
 
 VERSION = "0.1.0"
@@ -34,13 +34,9 @@ def create_app() -> FastAPI:
         jobs.jobs,
         jobs.demo,
         agent.router,
+        health.router,
     ):
         app.include_router(router)
-
-    @app.get("/health", tags=["meta"])
-    def health() -> dict[str, str]:
-        """Liveness probe."""
-        return {"status": "ok", "version": VERSION}
 
     return app
 

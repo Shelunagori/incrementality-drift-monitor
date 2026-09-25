@@ -125,3 +125,7 @@ class Clock(BaseModel):
     day: int
     date: dt.date
     max_day: int
+
+
+class DemoReset(Clock):
+    reseeded: bool

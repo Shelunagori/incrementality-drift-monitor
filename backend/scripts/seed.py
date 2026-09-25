@@ -1,8 +1,9 @@
 """Load the synthetic CSVs from backend/data/ into Postgres.
 
-Regenerates the data first if it is missing. Idempotent: existing rows are replaced.
+Regenerates the data first if it is missing. Default mode replaces existing rows;
+`--if-empty` loads only when the daily data is missing (safe on every container start).
 
-Usage: uv run python -m scripts.seed [--data data] [--database-url URL]
+Usage: uv run python -m scripts.seed [--if-empty] [--data data] [--database-url URL]
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from sqlalchemy import Engine, create_engine, text
 
 from app.config import get_settings
 from app.db.migrate import upgrade_to_head
+from app.db.url import normalize_database_url
 from scripts import generate_data
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -122,14 +124,39 @@ def load(engine: Engine, data_dir: Path = DATA_DIR) -> dict[str, int]:
         }
 
 
+def is_loaded(engine: Engine) -> bool:
+    """True when every base table has rows (daily conversions are the last big load)."""
+    with engine.connect() as conn:
+        return all(
+            conn.execute(text(f"SELECT EXISTS (SELECT 1 FROM {t})")).scalar_one()
+            for t in TABLES_IN_LOAD_ORDER
+        )
+
+
+def seed_if_empty(engine: Engine, data_dir: Path = DATA_DIR) -> bool:
+    """Load the synthetic data only if it is missing or partial. Returns True if it loaded."""
+    if is_loaded(engine):
+        return False
+    ensure_data(data_dir)
+    load(engine, data_dir)
+    return True
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--data", type=Path, default=DATA_DIR)
     parser.add_argument("--database-url", default=get_settings().database_url)
+    parser.add_argument("--if-empty", action="store_true", help="load only if data is missing")
     args = parser.parse_args()
+    url = normalize_database_url(args.database_url)
+    upgrade_to_head(url)
+    engine = create_engine(url)
+    if args.if_empty:
+        loaded = seed_if_empty(engine, args.data)
+        print("Seeded synthetic data." if loaded else "Data already present; seed skipped.")
+        return
     ensure_data(args.data)
-    upgrade_to_head(args.database_url)
-    counts = load(create_engine(args.database_url), args.data)
+    counts = load(engine, args.data)
     for table, n in counts.items():
         print(f"  {table:<18} {n:>7} rows")
 

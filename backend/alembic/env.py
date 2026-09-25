@@ -6,9 +6,12 @@ from alembic import context
 from app.config import get_settings
 from app.db import models  # noqa: F401  (register models on the metadata)
 from app.db.base import Base
+from app.db.url import normalize_database_url
 
 config = context.config
-url = config.get_main_option("sqlalchemy.url") or get_settings().database_url
+url = normalize_database_url(
+    config.get_main_option("sqlalchemy.url") or get_settings().database_url
+)
 
 connectable = create_engine(url)
 with connectable.connect() as connection:

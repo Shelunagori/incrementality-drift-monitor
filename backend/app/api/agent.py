@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.agent import graph
 from app.agent.tools import AgentContext
 from app.api.deps import db
+from app.api.ratelimit import agent_rate_limit
 from app.llm.provider import (
     ProviderConfigError,
     embedding_model_id,
@@ -17,7 +18,7 @@ from app.llm.provider import (
 )
 from app.services import monitor
 
-router = APIRouter(prefix="/agent", tags=["agent"])
+router = APIRouter(prefix="/agent", tags=["agent"], dependencies=[Depends(agent_rate_limit)])
 
 
 class ExplainRequest(BaseModel):

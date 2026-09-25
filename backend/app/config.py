@@ -1,8 +1,12 @@
 """Runtime configuration loaded from environment variables / .env."""
 
 from functools import lru_cache
+from typing import Annotated
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+
+from app.db.url import normalize_database_url
 
 
 class Settings(BaseSettings):
@@ -12,7 +16,13 @@ class Settings(BaseSettings):
 
     app_name: str = "incrementality-drift-monitor"
     database_url: str = "postgresql+psycopg://idm:idm@localhost:5432/idm"
-    cors_origins: list[str] = ["http://localhost:3000"]
+    db_pool_size: int = 5
+    db_max_overflow: int = 2
+    # Comma-separated list (e.g. "https://x.vercel.app,http://localhost:3000") or a JSON list.
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+    port: int = 8000
+    demo_reset_token: str = ""  # empty = POST /demo/reset disabled
+    agent_rate_limit_per_min: int = 10
     demo_start_day: int = 460  # simulated "today" after seeding (before any planted drift)
 
     # LLM / embeddings: ollama | anthropic | gemini | openai | fake (fake = deterministic, tests)
@@ -26,12 +36,32 @@ class Settings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-5"
     voyage_api_key: str = ""  # Anthropic has no embedding API; its recommended partner is Voyage
     voyage_model: str = "voyage-3"
-    google_api_key: str = ""
+    google_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY", "google_api_key"),
+    )
     gemini_model: str = "gemini-2.5-flash"
-    gemini_embedding_model: str = "models/text-embedding-004"
+    gemini_embedding_model: str = "models/gemini-embedding-001"  # text-embedding-004 shut down
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            value = value.strip()
+            if value.startswith("["):
+                import json
+
+                return json.loads(value)
+            return [o.strip() for o in value.split(",") if o.strip()]
+        return value
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalise_url(cls, value: str) -> str:
+        return normalize_database_url(value)
 
 
 @lru_cache

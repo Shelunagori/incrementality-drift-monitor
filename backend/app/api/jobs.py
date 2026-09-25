@@ -1,12 +1,24 @@
 """Recompute job and demo time controls."""
 
-from fastapi import APIRouter, Depends, Query
+import hmac
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
 from app.actions import audit
 from app.api.channels import list_channels
 from app.api.deps import db
-from app.api.schemas import ChannelSummary, Clock
+from app.api.schemas import ChannelSummary, Clock, DemoReset
+from app.config import get_settings
+from app.db.models import (
+    AuditEvent,
+    ChannelSnapshot,
+    EvidenceLedgerEntry,
+    Proposal,
+    ScheduledTest,
+    SimClock,
+)
 from app.services import monitor
 
 jobs = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -49,3 +61,34 @@ def set_day(day: int = Query(..., ge=0), session: Session = Depends(db)) -> Cloc
     audit.record(session, "clock", 1, "set", "demo", str(before), str(after))
     monitor.assessments(session)
     return _clock(session)
+
+
+@demo.post("/reset", response_model=DemoReset)
+def reset(
+    x_demo_token: str | None = Header(default=None), session: Session = Depends(db)
+) -> DemoReset:
+    """Back to the demo start: clock to DEMO_START_DAY, workflow tables and manual ledger
+    rows cleared, synthetic data re-seeded if missing. Requires X-Demo-Token."""
+    from scripts.seed import seed_if_empty  # scripts/ is a sibling package of app/
+
+    expected = get_settings().demo_reset_token
+    if not expected:
+        raise HTTPException(503, "Demo reset is disabled (DEMO_RESET_TOKEN not set)")
+    if not x_demo_token or not hmac.compare_digest(x_demo_token, expected):
+        raise HTTPException(403, "Invalid demo token")
+
+    reseeded = seed_if_empty(session.get_bind())
+    if reseeded:
+        monitor.clear_cache()
+    before = monitor.get_clock(session)
+    for model in (AuditEvent, ScheduledTest, Proposal, ChannelSnapshot):
+        session.execute(delete(model))
+    session.execute(delete(EvidenceLedgerEntry).where(EvidenceLedgerEntry.source != "seed"))
+    start = get_settings().demo_start_day
+    session.get(SimClock, 1).current_day = start  # type: ignore[union-attr]
+    session.flush()
+    audit.record(
+        session, "demo", 1, "reset", "demo-reset", str(before), str(start), {"reseeded": reseeded}
+    )
+    clock = _clock(session)
+    return DemoReset(day=clock.day, date=clock.date, max_day=clock.max_day, reseeded=reseeded)

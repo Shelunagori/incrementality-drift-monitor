@@ -11,7 +11,16 @@ from app.llm.provider import (
     get_embedding_model,
 )
 
-PROVIDER_ENV = ("LLM_PROVIDER", "EMBEDDING_PROVIDER", "OLLAMA_MODEL", "OLLAMA_EMBEDDING_MODEL")
+PROVIDER_ENV = (
+    "LLM_PROVIDER",
+    "EMBEDDING_PROVIDER",
+    "OLLAMA_MODEL",
+    "OLLAMA_EMBEDDING_MODEL",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+)
 
 
 @pytest.fixture(autouse=True)

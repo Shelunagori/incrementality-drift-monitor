@@ -51,7 +51,7 @@ def get_chat_model(settings: Settings | None = None) -> BaseChatModel:
     if name == "gemini":
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        key = _require(s.google_api_key, "GOOGLE_API_KEY", name)
+        key = _require(s.google_api_key, "GEMINI_API_KEY (or GOOGLE_API_KEY)", name)
         return ChatGoogleGenerativeAI(model=s.gemini_model, google_api_key=key, temperature=t)
     if name == "openai":
         from langchain_openai import ChatOpenAI
@@ -79,7 +79,7 @@ def get_embedding_model(settings: Settings | None = None) -> Embeddings:
     if name == "gemini":
         from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-        key = _require(s.google_api_key, "GOOGLE_API_KEY", name)
+        key = _require(s.google_api_key, "GEMINI_API_KEY (or GOOGLE_API_KEY)", name)
         return GoogleGenerativeAIEmbeddings(model=s.gemini_embedding_model, google_api_key=key)
     if name == "openai":
         from langchain_openai import OpenAIEmbeddings

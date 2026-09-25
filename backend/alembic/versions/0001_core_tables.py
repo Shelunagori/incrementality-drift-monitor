@@ -15,6 +15,8 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # pgvector first, so a brand-new database (e.g. Supabase) is ready for 0003.
+    op.execute("CREATE EXTENSION IF NOT EXISTS vector")
     op.create_table(
         "channels",
         sa.Column("id", sa.Integer, primary_key=True),
