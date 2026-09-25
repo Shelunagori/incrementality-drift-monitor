@@ -12,10 +12,11 @@ from app.api.deps import db
 from app.api.ratelimit import agent_rate_limit
 from app.llm.provider import (
     ProviderConfigError,
+    build_chat_chain,
     embedding_model_id,
-    get_chat_model,
     get_embedding_model,
 )
+from app.llm.resilient import FallbackChatModel, RetryingEmbeddings
 from app.services import monitor
 
 router = APIRouter(prefix="/agent", tags=["agent"], dependencies=[Depends(agent_rate_limit)])
@@ -49,14 +50,15 @@ class AgentResponse(BaseModel):
     fallback: bool = Field(description="Model answer rejected twice; template answer returned")
     violations: list[str]
     proposal_ids: list[int]
+    provider: str | None = Field(description="Chat provider that produced the final answer")
 
 
-def _context(session: Session) -> tuple[Any, AgentContext]:
+def _context(session: Session) -> tuple[FallbackChatModel, AgentContext]:
     try:
-        llm = get_chat_model()
+        llm = build_chat_chain()
         ctx = AgentContext(
             session=session,
-            embedder=get_embedding_model(),
+            embedder=RetryingEmbeddings(get_embedding_model()),
             embedding_model_id=embedding_model_id(),
             mode="chat",
         )
@@ -65,7 +67,7 @@ def _context(session: Session) -> tuple[Any, AgentContext]:
     return llm, ctx
 
 
-def _response(r: graph.AgentResult) -> AgentResponse:
+def _response(r: graph.AgentResult, llm: FallbackChatModel) -> AgentResponse:
     return AgentResponse(
         answer=r.answer,
         citations=[Citation(**c) for c in r.records],
@@ -74,6 +76,7 @@ def _response(r: graph.AgentResult) -> AgentResponse:
         fallback=r.fallback,
         violations=r.violations,
         proposal_ids=r.proposal_ids,
+        provider=llm.last_provider,
     )
 
 
@@ -82,10 +85,10 @@ def explain(body: ExplainRequest, session: Session = Depends(db)) -> AgentRespon
     if monitor.channel_by_name(session, body.channel) is None:
         raise HTTPException(404, f"Unknown channel '{body.channel}'")
     llm, ctx = _context(session)
-    return _response(graph.explain(llm, ctx, body.channel))
+    return _response(graph.explain(llm, ctx, body.channel), llm)
 
 
 @router.post("/chat", response_model=AgentResponse)
 def chat(body: ChatRequest, session: Session = Depends(db)) -> AgentResponse:
     llm, ctx = _context(session)
-    return _response(graph.chat(llm, ctx, [m.model_dump() for m in body.messages]))
+    return _response(graph.chat(llm, ctx, [m.model_dump() for m in body.messages]), llm)

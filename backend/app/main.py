@@ -8,6 +8,12 @@ from app import __doc__ as _pkg_doc
 from app.actions.errors import ActionError
 from app.api import agent, channels, health, jobs, ledger, proposals
 from app.config import get_settings
+from app.llm.resilient import LLMUnavailableError
+
+LLM_UNAVAILABLE = {
+    "error": "llm_unavailable",
+    "message": "AI explanation temporarily unavailable. Statistics are unaffected.",
+}
 
 VERSION = "0.1.0"
 
@@ -26,6 +32,11 @@ def create_app() -> FastAPI:
     @app.exception_handler(ActionError)
     def _action_error(_: Request, exc: ActionError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
+
+    # Handled here (inside CORSMiddleware) so the browser gets CORS headers, not a bare 500.
+    @app.exception_handler(LLMUnavailableError)
+    def _llm_unavailable(_: Request, exc: LLMUnavailableError) -> JSONResponse:
+        return JSONResponse(status_code=503, content=LLM_UNAVAILABLE)
 
     for router in (
         channels.router,

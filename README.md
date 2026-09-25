@@ -139,9 +139,16 @@ One env var switches the model (`.env`, see `.env.example`):
 | `anthropic` | `ANTHROPIC_MODEL` | `ANTHROPIC_API_KEY` |
 | `gemini` | `GEMINI_MODEL` | `GOOGLE_API_KEY` |
 | `openai` | `OPENAI_MODEL` | `OPENAI_API_KEY` |
+| `cloudflare` (chat only) | `CF_MODEL=@cf/meta/llama-3.3-70b-instruct-fp8-fast` | `CF_ACCOUNT_ID`, `CF_API_TOKEN` |
 | `fake` | offline template writer | – |
 
-`EMBEDDING_PROVIDER` takes the same values (`anthropic` uses Voyage AI with `VOYAGE_API_KEY`,
+**Resilience:** set `LLM_FALLBACK_PROVIDERS=gemini,cloudflare` to chain providers. Rate limits,
+overloads, timeouts and connection errors are retried twice (1s, 3s), then the next provider is
+tried; the API response names the one that answered in `provider`. The grounding check applies
+to every provider's answer. If all fail, `/agent/*` returns a JSON 503 (`llm_unavailable`) with
+CORS headers; statistics endpoints are unaffected.
+
+`EMBEDDING_PROVIDER` takes the same values except `cloudflare` (`anthropic` uses Voyage AI with `VOYAGE_API_KEY`,
 since Anthropic has no embeddings API). A missing key fails with a message naming the variable.
 
 ## Deploy (Railway + Supabase + Gemini)
@@ -163,7 +170,8 @@ the database is empty, then serves uvicorn on `$PORT`.
 | `DATABASE_URL` | Supabase session pooler string (plain `postgresql://` is fine) |
 | `LLM_PROVIDER` | `gemini` |
 | `GEMINI_API_KEY` | your Gemini API key |
-| `GEMINI_MODEL` | `gemini-2.5-flash` (or the model id Google AI Studio offers your key) |
+| `GEMINI_MODEL` | `gemini-3.8-flash` (default; `gemini-2.5-flash` returns 404 for new keys) |
+| `LLM_FALLBACK_PROVIDERS` | optional, e.g. `gemini,cloudflare` (needs `CF_ACCOUNT_ID`, `CF_API_TOKEN`) |
 | `EMBEDDING_PROVIDER` | `gemini` — **required**: the default is `ollama`, which does not exist on Railway |
 | `GEMINI_EMBEDDING_MODEL` | `models/gemini-embedding-001` — set it explicitly |
 | `CORS_ORIGINS` | your Vercel URL(s), comma-separated |

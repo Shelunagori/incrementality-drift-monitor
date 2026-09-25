@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     llm_provider: str = "ollama"
     embedding_provider: str = "ollama"
     llm_temperature: float = 0.0
+    # Ordered chat-provider chain, e.g. "gemini,cloudflare". Empty = just LLM_PROVIDER.
+    llm_fallback_providers: Annotated[list[str], NoDecode] = []
+    llm_timeout_seconds: float = 20
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_embedding_model: str = "nomic-embed-text"
@@ -40,8 +43,11 @@ class Settings(BaseSettings):
         default="",
         validation_alias=AliasChoices("GEMINI_API_KEY", "GOOGLE_API_KEY", "google_api_key"),
     )
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"  # 2.5 returns 404 for new keys
     gemini_embedding_model: str = "models/gemini-embedding-001"  # text-embedding-004 shut down
+    cf_account_id: str = ""  # Cloudflare Workers AI (chat only, OpenAI-compatible endpoint)
+    cf_api_token: str = ""
+    cf_model: str = "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     openai_embedding_model: str = "text-embedding-3-small"
@@ -56,6 +62,13 @@ class Settings(BaseSettings):
 
                 return json.loads(value)
             return [o.strip() for o in value.split(",") if o.strip()]
+        return value
+
+    @field_validator("llm_fallback_providers", mode="before")
+    @classmethod
+    def _split_providers(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [p.strip().lower() for p in value.split(",") if p.strip()]
         return value
 
     @field_validator("database_url")

@@ -80,3 +80,5 @@ Recorded here, not fixed.
 | P6 | 2026-09-25 | The Docker image was not built in the dev sandbox (no Docker daemon); the start sequence was verified by running `start.sh` directly. | First Railway build is the real check. |
 | P7 | 2026-09-25 | The Supabase pooler URL was tested only in form (local Postgres with a plain `postgresql://` URL); no network access to Supabase from the sandbox. | Verify on first deploy. |
 | P8 | 2026-09-25 | `scripts.seed.load` truncates and reloads in separate transactions. | A crash mid-load leaves partial data (the next start's `--if-empty` reloads it). |
+| P9 | 2026-09-25 | Unhandled exceptions other than `llm_unavailable` still become Starlette's plain 500 without CORS headers. | The browser shows "Failed to fetch" instead of an error message. |
+| P10 | 2026-09-25 | Tool calling through Cloudflare's OpenAI-compatible `/ai/v1` endpoint is not documented or verified (the model supports function calling natively). | `/agent/chat` may not get structured tool calls from Cloudflare; `/agent/explain` does not need them. |

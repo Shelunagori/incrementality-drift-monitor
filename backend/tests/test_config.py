@@ -88,3 +88,24 @@ def test_engine_pool_settings():
     assert engine.pool.size() == 5
     assert engine.pool._max_overflow == 2  # noqa: SLF001
     assert engine.pool._pre_ping is True  # noqa: SLF001
+
+
+def test_gemini_chat_default_is_3_8_flash():
+    # gemini-2.5-flash returns 404 for new API keys (production finding).
+    assert Settings(_env_file=None).gemini_model == "gemini-3.8-flash"
+
+
+def test_llm_resilience_settings(monkeypatch):
+    monkeypatch.setenv("LLM_FALLBACK_PROVIDERS", "gemini, cloudflare")
+    monkeypatch.setenv("CF_ACCOUNT_ID", "acc")
+    monkeypatch.setenv("CF_API_TOKEN", "tok")
+    s = Settings(_env_file=None)
+    assert s.llm_fallback_providers == ["gemini", "cloudflare"]
+    assert (s.cf_account_id, s.cf_api_token) == ("acc", "tok")
+    assert s.cf_model == "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+    assert s.llm_timeout_seconds == 20
+
+
+def test_fallback_providers_default_empty(monkeypatch):
+    monkeypatch.delenv("LLM_FALLBACK_PROVIDERS", raising=False)
+    assert Settings(_env_file=None).llm_fallback_providers == []

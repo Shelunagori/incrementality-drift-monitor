@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 from app.actions import proposals as proposal_actions
 from app.actions.errors import ActionError
 from app.knowledge import store
+from app.llm.resilient import EmbeddingUnavailableError
 from app.services import monitor
 from app.stats.constants import STEP_DAYS, WINDOW_DAYS
 from app.stats.schemas import ChannelAssessment, LedgerEntry, Status
@@ -184,10 +185,14 @@ def get_ledger(ctx: AgentContext, channel: str | None = None) -> dict[str, Any]:
 
 
 def search_methodology(ctx: AgentContext, query: str) -> dict[str, Any]:
-    if not ctx._index_synced:
-        store.sync_index(ctx.session, ctx.embedder, ctx.embedding_model_id)
-        ctx._index_synced = True
-    hits = store.search(ctx.session, ctx.embedder, ctx.embedding_model_id, query)
+    try:
+        if not ctx._index_synced:
+            store.sync_index(ctx.session, ctx.embedder, ctx.embedding_model_id)
+            ctx._index_synced = True
+        hits = store.search(ctx.session, ctx.embedder, ctx.embedding_model_id, query)
+    except EmbeddingUnavailableError:
+        # Embeddings have no fallback provider; the explanation carries on without RAG.
+        return {"error": "Methodology search is temporarily unavailable."}
     for h in hits:
         if h["source"] == "ledger_note":
             h["content"] = untrusted(h["content"])
