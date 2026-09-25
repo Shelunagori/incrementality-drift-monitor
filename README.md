@@ -144,7 +144,8 @@ One env var switches the model (`.env`, see `.env.example`):
 
 **Resilience:** set `LLM_FALLBACK_PROVIDERS=gemini,cloudflare` to chain providers. Rate limits,
 overloads, timeouts and connection errors are retried twice (1s, 3s), then the next provider is
-tried; the API response names the one that answered in `provider`. The grounding check applies
+tried; the API response names the one that answered in `provider`. Every provider gets an
+explicit output limit (`LLM_MAX_TOKENS`, default 1024). The grounding check applies
 to every provider's answer. If all fail, `/agent/*` returns a JSON 503 (`llm_unavailable`) with
 CORS headers; statistics endpoints are unaffected.
 

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # Ordered chat-provider chain, e.g. "gemini,cloudflare". Empty = just LLM_PROVIDER.
     llm_fallback_providers: Annotated[list[str], NoDecode] = []
     llm_timeout_seconds: float = 20
+    llm_max_tokens: int = 1024  # explicit output limit for every chat provider
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1:8b"
     ollama_embedding_model: str = "nomic-embed-text"

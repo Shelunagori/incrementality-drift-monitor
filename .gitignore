@@ -29,3 +29,6 @@ next-env.d.ts
 .DS_Store
 .idea/
 .vscode/
+
+# Local API response dumps (e.g. curl output) at the repo root
+/*.json

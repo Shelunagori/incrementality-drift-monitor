@@ -45,14 +45,17 @@ def _check(name: str, kind: str, allowed: tuple[str, ...] = PROVIDERS) -> str:
 
 def get_chat_model(settings: Settings | None = None, name: str | None = None) -> BaseChatModel:
     """Chat model for `name` (default LLM_PROVIDER). SDK-level retries are off: the chain in
-    resilient.py owns retrying, so the backoff is predictable."""
+    resilient.py owns retrying, so the backoff is predictable. Every provider gets an explicit
+    output limit (LLM_MAX_TOKENS); some defaults (Cloudflare) cut answers off mid-sentence."""
     s = settings or get_settings()
     name = _check(name or s.llm_provider, "LLM_PROVIDER")
-    t, timeout = s.llm_temperature, s.llm_timeout_seconds
+    t, timeout, max_tokens = s.llm_temperature, s.llm_timeout_seconds, s.llm_max_tokens
     if name == "ollama":
         from langchain_ollama import ChatOllama
 
-        return ChatOllama(model=s.ollama_model, base_url=s.ollama_base_url, temperature=t)
+        return ChatOllama(
+            model=s.ollama_model, base_url=s.ollama_base_url, temperature=t, num_predict=max_tokens
+        )
     if name == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
@@ -61,6 +64,7 @@ def get_chat_model(settings: Settings | None = None, name: str | None = None) ->
             model=s.anthropic_model,
             api_key=key,
             temperature=t,
+            max_tokens=max_tokens,
             max_retries=0,
             default_request_timeout=timeout,
         )
@@ -69,14 +73,24 @@ def get_chat_model(settings: Settings | None = None, name: str | None = None) ->
 
         key = _require(s.google_api_key, "GEMINI_API_KEY (or GOOGLE_API_KEY)", name)
         return ChatGoogleGenerativeAI(
-            model=s.gemini_model, google_api_key=key, temperature=t, max_retries=0, timeout=timeout
+            model=s.gemini_model,
+            google_api_key=key,
+            temperature=t,
+            max_output_tokens=max_tokens,
+            max_retries=0,
+            timeout=timeout,
         )
     if name == "openai":
         from langchain_openai import ChatOpenAI
 
         key = _require(s.openai_api_key, "OPENAI_API_KEY", name)
         return ChatOpenAI(
-            model=s.openai_model, api_key=key, temperature=t, max_retries=0, timeout=timeout
+            model=s.openai_model,
+            api_key=key,
+            temperature=t,
+            max_tokens=max_tokens,
+            max_retries=0,
+            timeout=timeout,
         )
     if name == "cloudflare":
         from langchain_openai import ChatOpenAI
@@ -90,6 +104,9 @@ def get_chat_model(settings: Settings | None = None, name: str | None = None) ->
             max_retries=0,
             timeout=timeout,
             base_url=CLOUDFLARE_BASE_URL.format(account_id=account),
+            # ChatOpenAI sends its own limit as `max_completion_tokens`; Workers AI reads
+            # `max_tokens`, so it goes in the body explicitly.
+            extra_body={"max_tokens": max_tokens},
         )
     from app.llm.fake import TemplateChatModel
 

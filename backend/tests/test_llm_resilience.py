@@ -276,3 +276,48 @@ def test_embeddings_give_up_after_retries(sleeps):
 def test_scripted_model_is_accepted_as_a_chain_member(sleeps):
     c = chain([("scripted", ScriptedChatModel(responses=[AIMessage(content="x")]))], sleeps)
     assert c.invoke(MSG).content == "x" and c.last_provider == "scripted"
+
+
+# --- output length limit ----------------------------------------------------------------------
+
+
+def _all_configured(**kw):
+    return Settings(
+        _env_file=None,
+        google_api_key="k",
+        openai_api_key="k",
+        anthropic_api_key="k",
+        cf_account_id="a",
+        cf_api_token="t",
+        **kw,
+    )
+
+
+def test_max_tokens_default_and_env(monkeypatch):
+    monkeypatch.delenv("LLM_MAX_TOKENS", raising=False)
+    assert Settings(_env_file=None).llm_max_tokens == 1024
+    monkeypatch.setenv("LLM_MAX_TOKENS", "2048")
+    assert Settings(_env_file=None).llm_max_tokens == 2048
+
+
+@pytest.mark.parametrize(
+    ("provider", "attr"),
+    [
+        ("gemini", "max_output_tokens"),
+        ("openai", "max_tokens"),
+        ("anthropic", "max_tokens"),
+        ("ollama", "num_predict"),
+    ],
+)
+def test_every_provider_gets_the_token_limit(provider, attr):
+    s = _all_configured(llm_max_tokens=777)
+    assert getattr(get_chat_model(s, provider), attr) == 777
+
+
+def test_cloudflare_request_carries_max_tokens():
+    """Cloudflare's /ai/v1 reads `max_tokens`; ChatOpenAI's own field is sent as
+    `max_completion_tokens`, so the limit goes in the request body explicitly."""
+    m = get_chat_model(_all_configured(llm_max_tokens=900), "cloudflare")
+    payload = m._get_request_payload(MSG)  # noqa: SLF001
+    assert payload["extra_body"] == {"max_tokens": 900}
+    assert "max_completion_tokens" not in payload
