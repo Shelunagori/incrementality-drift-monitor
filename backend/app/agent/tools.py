@@ -16,10 +16,12 @@ from typing import Any
 
 from langchain_core.embeddings import Embeddings
 from langchain_core.tools import StructuredTool
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.actions import proposals as proposal_actions
 from app.actions.errors import ActionError
+from app.db.models import Channel
 from app.knowledge import store
 from app.llm.resilient import EmbeddingUnavailableError
 from app.services import monitor
@@ -30,6 +32,31 @@ TIMELINE_POINTS = 12  # most recent windows sent to the model
 PROPOSAL_REQUEST = re.compile(
     r"\b(propose|proposal|retest|re-test|new test|design (a )?test|schedule (a )?test)\b", re.I
 )
+
+
+def _channel_key(text: str) -> str:
+    """Case, spaces, hyphens and underscores do not matter: 'Google Search' == 'google_search'."""
+    return re.sub(r"[\s_\-]+", "", text.strip().lower())
+
+
+def channel_ids(session: Session) -> list[str]:
+    return list(session.scalars(select(Channel.name).order_by(Channel.id)))
+
+
+def resolve_channel(session: Session, raw: str | None) -> str | None:
+    """Map a model-supplied channel (id or display name, any case/spacing) to its id."""
+    if not raw or not raw.strip():
+        return None
+    key = _channel_key(raw)
+    for ch in session.scalars(select(Channel).order_by(Channel.id)):
+        if key in (_channel_key(ch.name), _channel_key(ch.display_name)):
+            return ch.name
+    return None
+
+
+def unknown_channel(session: Session, raw: str | None) -> dict[str, Any]:
+    ids = ", ".join(channel_ids(session))
+    return {"error": f"Channel '{raw}' not recognized. Valid channel ids: {ids}."}
 
 
 def untrusted(text: str) -> str:
@@ -109,9 +136,10 @@ def _ledger_out(e: LedgerEntry) -> dict[str, Any]:
 
 
 def get_channel_status(ctx: AgentContext, channel: str) -> dict[str, Any]:
-    a = ctx.assessment(channel)
+    raw, channel = channel, resolve_channel(ctx.session, channel)
+    a = ctx.assessment(channel) if channel else None
     if a is None:
-        return {"error": f"Unknown channel '{channel}'"}
+        return unknown_channel(ctx.session, raw)
     ch = monitor.channel_by_name(ctx.session, channel)
     cur = a.series[-1]
     return {
@@ -133,9 +161,10 @@ def get_channel_status(ctx: AgentContext, channel: str) -> dict[str, Any]:
 
 
 def get_channel_timeline(ctx: AgentContext, channel: str) -> dict[str, Any]:
-    a = ctx.assessment(channel)
+    raw, channel = channel, resolve_channel(ctx.session, channel)
+    a = ctx.assessment(channel) if channel else None
     if a is None:
-        return {"error": f"Unknown channel '{channel}'"}
+        return unknown_channel(ctx.session, raw)
     ps, cs, cp = a.drift.posterior_shift, a.drift.cusum, a.drift.relevant_changepoint
     return {
         "channel": channel,
@@ -180,6 +209,11 @@ def get_channel_timeline(ctx: AgentContext, channel: str) -> dict[str, Any]:
 
 
 def get_ledger(ctx: AgentContext, channel: str | None = None) -> dict[str, Any]:
+    if channel and channel.strip():
+        resolved = resolve_channel(ctx.session, channel)
+        if resolved is None:
+            return unknown_channel(ctx.session, channel)
+        channel = resolved
     entries = [e for e in monitor.load_ledger(ctx.session) if channel in (None, "", e.channel)]
     return {"entries": [_ledger_out(e) for e in entries]}
 
@@ -200,6 +234,9 @@ def search_methodology(ctx: AgentContext, query: str) -> dict[str, Any]:
 
 
 def draft_retest_proposal(ctx: AgentContext, channel: str, rationale: str = "") -> dict[str, Any]:
+    raw, channel = channel, resolve_channel(ctx.session, channel)
+    if channel is None:
+        return unknown_channel(ctx.session, raw)
     allowed, why = ctx.proposal_allowed(channel)
     if not allowed:
         return {"error": why}
@@ -279,9 +316,23 @@ _SIGNATURES = {
 }
 
 
-def tool_schemas() -> list[StructuredTool]:
-    """Schemas for `bind_tools`. Execution always goes through `call_tool`, not these stubs."""
+CHANNEL_TOOLS = {
+    "get_channel_status",
+    "get_channel_timeline",
+    "get_ledger",
+    "draft_retest_proposal",
+}
+
+
+def tool_schemas(channel_ids: list[str] | None = None) -> list[StructuredTool]:
+    """Schemas for `bind_tools`. Execution always goes through `call_tool`, not these stubs.
+    With `channel_ids`, tools taking a channel list the valid ids in their description."""
+    suffix = f" Valid channel ids: {', '.join(channel_ids)}." if channel_ids else ""
+
+    def describe(name: str) -> str:
+        return TOOL_FUNCS[name][1] + (suffix if name in CHANNEL_TOOLS else "")
+
     return [
-        StructuredTool.from_function(_SIGNATURES[n], name=n, description=TOOL_FUNCS[n][1])
+        StructuredTool.from_function(_SIGNATURES[n], name=n, description=describe(n))
         for n in TOOL_FUNCS
     ]

@@ -25,7 +25,13 @@ from langgraph.graph.message import add_messages
 
 from app.agent import prompts
 from app.agent.guardrails import check_answer, mentions_hypotheses
-from app.agent.tools import PROPOSAL_REQUEST, AgentContext, call_tool, tool_schemas
+from app.agent.tools import (
+    PROPOSAL_REQUEST,
+    AgentContext,
+    call_tool,
+    channel_ids,
+    tool_schemas,
+)
 from app.llm.fake import TemplateChatModel, parse_blocks
 
 MAX_TOOL_ROUNDS = 5
@@ -137,7 +143,7 @@ def build_explain_graph(llm: BaseChatModel, ctx: AgentContext, channel: str):
 
 
 def build_chat_graph(llm: BaseChatModel, ctx: AgentContext):
-    model = llm.bind_tools(tool_schemas())
+    model = llm.bind_tools(tool_schemas(channel_ids(ctx.session)))
 
     def agent(state: State) -> dict[str, Any]:
         ai = model.invoke(state["messages"])
